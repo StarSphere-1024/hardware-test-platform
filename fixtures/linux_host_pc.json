@@ -1,0 +1,16 @@
+{
+  "fixture_name": "linux_host_pc",
+  "description": "Default Linux host PC validation fixture.",
+  "cases": [
+    "cases/linux_host_pc/eth_case.json",
+    "cases/linux_host_pc/uart_case.json",
+    "cases/linux_host_pc/rtc_case.json",
+    "cases/linux_host_pc/i2c_case.json"
+  ],
+  "execution": "sequential",
+  "stop_on_failure": false,
+  "report_enabled": true,
+  "timeout": 300,
+  "retry": 2,
+  "retry_interval": 5
+}

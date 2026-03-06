@@ -18,7 +18,7 @@ def test_execution_request_is_json_serializable() -> None:
     request = ExecutionRequest(
         request_id="req-001",
         target_type="fixture",
-        target_name="fixtures/quick_validation.json",
+        target_name="fixtures/linux_host_pc.json",
         cli_overrides={"timeout": 120},
         board_profile="rk3576",
         operator="tester",
@@ -34,11 +34,11 @@ def test_execution_request_is_json_serializable() -> None:
 
 def test_execution_context_serializes_with_resolved_config() -> None:
     resolver = ConfigResolver(REPO_ROOT)
-    resolved_config = resolver.resolve_fixture("fixtures/quick_validation.json")
+    resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     root_task = ExecutionTask(
-        task_id="fixture.quick_validation",
+        task_id="fixture.linux_host_pc",
         task_type="fixture",
-        name="quick_validation",
+        name="linux_host_pc",
         execution_mode="sequential",
         payload={"fixture": resolved_config.fixture.to_dict() if resolved_config.fixture else None},
         timeout=resolved_config.resolved_runtime["timeout"],
@@ -70,7 +70,7 @@ def test_execution_context_serializes_with_resolved_config() -> None:
 
     payload = context.to_dict()
 
-    assert payload["resolved_config"]["cases"][0]["functions"][0]["params"]["interface"] == "end0"
+    assert payload["resolved_config"]["cases"][0]["functions"][0]["params"]["interface"] == "eno1"
     assert payload["artifacts_dir"]["tmp_dir"].endswith("tmp")
     json.dumps(plan.to_dict())
     json.dumps(payload)
@@ -86,7 +86,7 @@ def test_execution_result_snapshot_and_dashboard_are_serializable() -> None:
         status=ResultStatus.PASSED,
         code=0,
         message="ping ok",
-        details={"interface": "end0"},
+        details={"interface": "eno1"},
         metrics={"avg_latency_ms": 1.2},
         artifacts=[ReportArtifact(artifact_type="json", uri="reports/eth.json", content_type="application/json")],
         started_at=started_at,

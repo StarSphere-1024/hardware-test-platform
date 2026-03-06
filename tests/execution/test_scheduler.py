@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def _build_context(resolved_config):
     return ExecutionContext(
         request_id="req-exec-001",
-        plan_id="plan.quick_validation",
+        plan_id="plan.linux_host_pc",
         resolved_config=resolved_config,
         runtime_state={},
         artifacts_dir=ArtifactDirectories(
@@ -31,17 +31,15 @@ def _build_context(resolved_config):
 
 def test_fixture_runner_builds_execution_plan_from_resolved_config() -> None:
     resolver = ConfigResolver(REPO_ROOT)
-    resolved_config = resolver.resolve_fixture("fixtures/quick_validation.json")
+    resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
 
     plan = FixtureRunner().build_plan(resolved_config)
 
     assert plan.root_task.task_type == "fixture"
-    assert plan.root_task.name == "quick_validation"
-    assert len(plan.tasks) == 11
+    assert plan.root_task.name == "linux_host_pc"
+    assert len(plan.tasks) == 9
     assert [task.task_type for task in plan.tasks] == [
         "fixture",
-        "case",
-        "function",
         "case",
         "function",
         "case",
@@ -57,7 +55,7 @@ def test_fixture_runner_builds_execution_plan_from_resolved_config() -> None:
 
 def test_scheduler_runs_fixture_sequentially_and_aggregates_results() -> None:
     resolver = ConfigResolver(REPO_ROOT)
-    resolved_config = resolver.resolve_fixture("fixtures/quick_validation.json")
+    resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     plan = FixtureRunner().build_plan(resolved_config)
 
     registry = {
@@ -92,20 +90,20 @@ def test_scheduler_runs_fixture_sequentially_and_aggregates_results() -> None:
     result = Scheduler(FunctionExecutor(registry)).run(plan, _build_context(resolved_config))
 
     assert result.status == ResultStatus.PASSED
-    assert len(result.children) == 5
+    assert len(result.children) == 4
     assert result.children[0].children[0].status == ResultStatus.PASSED
-    assert result.children[1].children[0].details["port"] == "/dev/ttyS0"
-    assert result.children[4].children[0].details["bus"] == "/dev/i2c-0"
+    assert result.children[1].children[0].details["port"] == "/dev/ttyUSB0"
+    assert result.children[3].children[0].details["bus"] == "/dev/i2c-0"
 
 
 def test_scheduler_retries_failed_function_until_success() -> None:
     resolver = ConfigResolver(REPO_ROOT)
-    resolved_config = resolver.resolve_fixture("fixtures/quick_validation.json")
+    resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     flaky_case = copy.deepcopy(resolved_config.cases[0])
     flaky_case.functions[0].retry = 2
     flaky_case.functions[0].retry_interval = 0
     resolved_config.cases = [flaky_case]
-    resolved_config.fixture.cases = ["cases/eth_case.json"]
+    resolved_config.fixture.cases = ["cases/linux_host_pc/eth_case.json"]
     plan = FixtureRunner().build_plan(resolved_config)
 
     attempts = {"count": 0}
@@ -126,7 +124,7 @@ def test_scheduler_retries_failed_function_until_success() -> None:
 
 def test_scheduler_marks_timeout_and_honors_stop_on_failure() -> None:
     resolver = ConfigResolver(REPO_ROOT)
-    resolved_config = resolver.resolve_fixture("fixtures/quick_validation.json")
+    resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     timeout_case = copy.deepcopy(resolved_config.cases[0])
     timeout_case.stop_on_failure = True
     timeout_case.functions[0].timeout = 0
@@ -136,7 +134,7 @@ def test_scheduler_marks_timeout_and_honors_stop_on_failure() -> None:
     timeout_case.functions[1].name = "test_eth_second"
     timeout_case.functions[1].timeout = 1
     resolved_config.cases = [timeout_case]
-    resolved_config.fixture.cases = ["cases/eth_case.json"]
+    resolved_config.fixture.cases = ["cases/linux_host_pc/eth_case.json"]
     plan = FixtureRunner().build_plan(resolved_config)
 
     def slow_test(interface, target_ip):

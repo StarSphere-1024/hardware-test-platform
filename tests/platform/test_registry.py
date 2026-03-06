@@ -30,18 +30,18 @@ def test_linux_adapter_collects_system_info() -> None:
 
 
 def test_platform_registry_builds_linux_capabilities_from_board_profile() -> None:
-    board_profile = ConfigResolver(REPO_ROOT).resolve_fixture("fixtures/quick_validation.json").board_profile
+    board_profile = ConfigResolver(REPO_ROOT).resolve_fixture("fixtures/linux_host_pc.json").board_profile
     registry = PlatformRegistry()
 
     adapters, capabilities = registry.create_runtime_registries(board_profile)
 
     assert isinstance(adapters["linux"], LinuxAdapter)
     assert set(capabilities) >= {"network", "serial", "gpio", "i2c", "rtc", "system_info"}
-    assert capabilities["system_info"].collect()["board_profile"] == "rk3576"
+    assert capabilities["system_info"].collect()["board_profile"] == "linux_host_pc"
 
 
 def test_capabilities_are_safe_when_devices_are_absent() -> None:
-    board_profile = ConfigResolver(REPO_ROOT).resolve_fixture("fixtures/quick_validation.json").board_profile
+    board_profile = ConfigResolver(REPO_ROOT).resolve_fixture("fixtures/linux_host_pc.json").board_profile
     _, capabilities = PlatformRegistry().create_runtime_registries(board_profile)
 
     network_interfaces = capabilities["network"].list_interfaces(include_loopback=True)
@@ -59,7 +59,7 @@ def test_capabilities_are_safe_when_devices_are_absent() -> None:
 
 
 def test_network_capability_prefers_board_profile_candidates() -> None:
-    board_profile = ConfigResolver(REPO_ROOT).resolve_fixture("fixtures/quick_validation.json").board_profile
+    board_profile = ConfigResolver(REPO_ROOT).resolve_fixture("fixtures/linux_host_pc.json").board_profile
     _, capabilities = PlatformRegistry().create_runtime_registries(board_profile)
 
     resolved = capabilities["network"].resolve_primary(["definitely-missing-interface", "lo"])

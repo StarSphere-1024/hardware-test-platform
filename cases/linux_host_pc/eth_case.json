@@ -15,7 +15,7 @@
       "name": "test_eth_ping",
       "params": {
         "interface": "${resolved.interfaces.eth.primary}",
-        "target_ip": "192.168.1.100"
+        "target_ip": "192.168.100.1"
       },
       "expect": {
         "pass_policy": "all",

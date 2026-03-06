@@ -83,7 +83,7 @@ def _run_quick_validation(tmp_path: Path, capsys, *, stop_on_failure: bool = Fal
         "--artifacts-root",
         str(tmp_path / "artifacts"),
         "--config",
-        "fixtures/quick_validation.json",
+        "fixtures/linux_host_pc.json",
     ]
     if stop_on_failure:
         argv.append("--stop-on-failure")
@@ -208,12 +208,11 @@ def test_quick_validation_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> 
 
     assert exit_code == 0
     assert payload["status"] == "passed"
-    assert len(payload["result"]["children"]) == 5
+    assert len(payload["result"]["children"]) == 4
     assert [case_result["children"][0]["name"] for case_result in payload["result"]["children"]] == [
         "test_eth_ping",
         "test_uart_loopback",
         "test_rtc_read",
-        "test_gpio_mapping",
         "test_i2c_scan",
     ]
     assert snapshot_path.exists()
@@ -223,9 +222,9 @@ def test_quick_validation_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> 
     assert all(path.exists() for path in report_paths)
 
     snapshot_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
-    assert snapshot_payload["fixture"]["name"] == "quick_validation"
+    assert snapshot_payload["fixture"]["name"] == "linux_host_pc"
     assert snapshot_payload["current_status"] == "passed"
-    assert snapshot_payload["counters"]["passed"] >= 5
+    assert snapshot_payload["counters"]["passed"] >= 4
 
     event_lines = event_log_path.read_text(encoding="utf-8").splitlines()
     events = [json.loads(line) for line in event_lines]
@@ -238,8 +237,8 @@ def test_quick_validation_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> 
 
     json_report = next(path for path in report_paths if path.suffix == ".json")
     report_payload = json.loads(json_report.read_text(encoding="utf-8"))
-    assert report_payload["request"]["target_name"] == "fixtures/quick_validation.json"
-    assert report_payload["config_snapshot"]["fixture"]["fixture_name"] == "quick_validation"
+    assert report_payload["request"]["target_name"] == "fixtures/linux_host_pc.json"
+    assert report_payload["config_snapshot"]["fixture"]["fixture_name"] == "linux_host_pc"
     assert report_payload["result_snapshot"]["current_status"] == "passed"
     assert report_payload["metadata"]["event_count"] == len(event_lines) - 1
 
@@ -255,7 +254,7 @@ def test_quick_validation_fixture_stop_on_failure_smoke(tmp_path: Path, monkeypa
     assert exit_code == 1
     assert payload["status"] == "aborted"
     case_results = payload["result"]["children"]
-    assert len(case_results) == 5
+    assert len(case_results) == 4
     assert case_results[0]["name"] == "eth_case"
     assert case_results[0]["status"] == "failed"
     assert case_results[0]["children"][0]["name"] == "test_eth_ping"
@@ -264,7 +263,7 @@ def test_quick_validation_fixture_stop_on_failure_smoke(tmp_path: Path, monkeypa
     assert all(case_result["message"] == "aborted by stop_on_failure" for case_result in case_results[1:])
 
     snapshot_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
-    assert snapshot_payload["fixture"]["name"] == "quick_validation"
+    assert snapshot_payload["fixture"]["name"] == "linux_host_pc"
     assert snapshot_payload["current_status"] == "aborted"
     assert snapshot_payload["counters"]["failed"] >= 1
     assert snapshot_payload["counters"]["aborted"] >= 1

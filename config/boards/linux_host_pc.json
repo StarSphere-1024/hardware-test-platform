@@ -1,0 +1,55 @@
+{
+  "profile_name": "linux_host_pc",
+  "platform": "linux",
+  "supported_cases": [
+    "eth_case",
+    "uart_case",
+    "rtc_case",
+    "gpio_case",
+    "i2c_case"
+  ],
+  "interfaces": {
+    "eth": [
+      "eno1",
+      "eth0",
+      "enp0s31f6",
+      "enp3s0",
+      "wlan0",
+      "wlp2s0",
+      "end0"
+    ],
+    "uart": [
+      "/dev/ttyUSB0",
+      "/dev/ttyS0"
+    ],
+    "gpio": [
+      "/dev/gpiochip0"
+    ],
+    "i2c": [
+      "/dev/i2c-0",
+      "/dev/i2c-1",
+      "/dev/i2c-2"
+    ],
+    "rtc": [
+      "/dev/rtc0"
+    ]
+  },
+  "capabilities": {
+    "network": {
+      "ping": true
+    },
+    "serial": {
+      "loopback": true
+    }
+  },
+  "tools_required": [
+    "ip",
+    "ping",
+    "ethtool"
+  ],
+  "metadata": {
+    "vendor": "Generic",
+    "board_family": "linux_host_pc",
+    "usage": "default local PC validation profile"
+  }
+}

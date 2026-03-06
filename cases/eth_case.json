@@ -1,0 +1,33 @@
+{
+  "case_name": "eth_case",
+  "module": "network",
+  "description": "Minimal Ethernet validation case for phase A config resolution.",
+  "execution": "sequential",
+  "timeout": 90,
+  "required_interfaces": {
+    "eth": {
+      "required": true,
+      "select": "auto"
+    }
+  },
+  "functions": [
+    {
+      "name": "test_eth_ping",
+      "params": {
+        "interface": "${resolved.interfaces.eth.primary}",
+        "target_ip": "192.168.1.100"
+      },
+      "expect": {
+        "pass_policy": "all",
+        "rules": [
+          {
+            "field": "success",
+            "operator": "eq",
+            "value": true,
+            "message": "ping must succeed"
+          }
+        ]
+      }
+    }
+  ]
+}

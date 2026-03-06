@@ -1,0 +1,22 @@
+{
+  "case_name": "i2c_case",
+  "module": "i2c",
+  "description": "Minimal I2C bus scan case for phase G asset rollout.",
+  "execution": "sequential",
+  "required_interfaces": {
+    "i2c": {
+      "required": true,
+      "select": "auto"
+    }
+  },
+  "functions": [
+    {
+      "name": "test_i2c_scan",
+      "params": {
+        "bus": "${resolved.interfaces.i2c.primary}",
+        "scan_all": true
+      },
+      "timeout": 15
+    }
+  ]
+}

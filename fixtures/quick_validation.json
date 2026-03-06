@@ -1,0 +1,17 @@
+{
+  "fixture_name": "quick_validation",
+  "description": "Minimal quick validation fixture for the first delivery phase.",
+  "cases": [
+    "cases/eth_case.json",
+    "cases/uart_case.json",
+    "cases/rtc_case.json",
+    "cases/gpio_case.json",
+    "cases/i2c_case.json"
+  ],
+  "execution": "sequential",
+  "stop_on_failure": false,
+  "report_enabled": true,
+  "timeout": 300,
+  "retry": 2,
+  "retry_interval": 5
+}

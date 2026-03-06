@@ -1,0 +1,21 @@
+{
+  "case_name": "gpio_case",
+  "module": "gpio",
+  "description": "Minimal GPIO mapping validation case for phase G asset rollout.",
+  "execution": "sequential",
+  "required_interfaces": {
+    "gpio": {
+      "required": true,
+      "select": "auto"
+    }
+  },
+  "functions": [
+    {
+      "name": "test_gpio_mapping",
+      "params": {
+        "physical_pin": 7
+      },
+      "timeout": 10
+    }
+  ]
+}

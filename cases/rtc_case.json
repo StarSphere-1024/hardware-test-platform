@@ -1,0 +1,21 @@
+{
+  "case_name": "rtc_case",
+  "module": "rtc",
+  "description": "Minimal RTC validation case for phase G asset rollout.",
+  "execution": "sequential",
+  "required_interfaces": {
+    "rtc": {
+      "required": true,
+      "select": "auto"
+    }
+  },
+  "functions": [
+    {
+      "name": "test_rtc_read",
+      "params": {
+        "rtc_device": "${resolved.interfaces.rtc.primary}"
+      },
+      "timeout": 15
+    }
+  ]
+}

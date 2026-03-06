@@ -1,0 +1,23 @@
+{
+  "case_name": "uart_case",
+  "module": "uart",
+  "description": "Minimal UART validation case for phase A config resolution.",
+  "execution": "sequential",
+  "required_interfaces": {
+    "uart": {
+      "required": true,
+      "select": "auto"
+    }
+  },
+  "functions": [
+    {
+      "name": "test_uart_loopback",
+      "params": {
+        "port": "${resolved.interfaces.uart.primary}",
+        "baudrate": 115200,
+        "payload": "phase-a"
+      },
+      "timeout": 45
+    }
+  ]
+}

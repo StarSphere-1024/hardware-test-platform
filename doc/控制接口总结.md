@@ -1,0 +1,28 @@
+# 常见嵌入式 Linux 平台下 Python 控制/测试硬件接口通用方式总结
+
+| 类别 | 子项 | 是否有通用 Python 控制方法 | 推荐控制方法 | 是否跨平台通用 | 说明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 网络类 | ETH（以太网） | 是 | `subprocess` 调用 `ethtool`、`iperf3`、`ping` | 是 | **底层/通用性**：直接基于 Linux 标准网络子系统。Python 通过脚本调用系统指令即可统一管理网络。<br>**平台差异**：仅需在 Python 中修改网卡名称字符串（如 `eth0`、`enp1s0` 等）。 |
+| 网络类 | WLAN（无线局域网） | 是 | `subprocess` 调用 `nmcli`、`iw` + `iperf3` | 是 | **底层/通用性**：依赖 Linux 标准无线扩展 (cfg80211)。Python 统一调用 `nmcli` 进行扫描/连接。<br>**平台差异**：底层硬件（原生或 PCIe/USB 模组）不同，但只要驱动就绪，上层命令与测试逻辑完全一致。 |
+| 网络类 | 4G模块：测速、稳定性、网口灯状态 | 是（部分需硬件配合） | `pyserial` (发 AT) + `subprocess` (`iperf3`/`ping`) | 是 | **底层/通用性**：模块走 USB/PCIe 映射为标准串口。Python 代码使用 `pyserial` 跨平台统一发送 AT 指令（如查网络注册态代偿“看灯”需求）。<br>**平台差异**：仅需修改 Python 传入的串口路径（如 `/dev/ttyUSB2`）。 |
+| 电源类 | 循环上下电 | 否（需外部硬件） | Python 控制程控电源 / 继电器 | 外部通用 | 平台无法“拔插”自身。需在外部上位机运行 Python，通过串口/网络控制继电器给被测板断电。被测板内的 Python 仅负责开机自启写日志。 |
+| 电源类 | DC/AC的EMI测试 | 否（需仪器配合） | `subprocess` 调用 `stress-ng` + 外部 EMI 仪器 | 脚本通用 | **通用性**：EMI 强依赖硬件暗室。Python 的作用是跨平台运行 `stress-ng` 统一制造拉满 CPU/内存的极限功耗状态。<br>**平台差异**：各平台 NPU/GPU 压测工具不同，需在 Python 中按平台分支调用。 |
+| 电源类 | POE供电 | 是（仅查状态） | `smbus2` (查 PoE 芯片) / 满负载脚本 | 否（依赖硬件） | POE 是底层硬件握手。Python 仅能通过 `smbus2` 操作 PoE 扩展板上的 I2C 寄存器读取状态。各家 PoE 方案寄存器地址完全不同，需定制代码。 |
+| USB接口 | 设备识别 | 是 | `pyusb` / `subprocess` 调用 `lsusb` | 是 | **底层/通用性**：基于内核 `usbcore` 和 `libusb` 标准。`pyusb` API 跨平台完全通用。<br>**平台差异**：无。各平台均能统一解析 VID/PID。 |
+| USB接口 | 测速（SSD转USB） | 是 | `subprocess` 调用 `fio`、`dd` | 是 | **通用性**：挂载为 `/dev/sd*` 后，Python 包装 `fio` 命令进行读写 IOPS 和带宽测试。全平台 Linux 逻辑一致。 |
+| USB接口 | 过载保护 | 是（需外部负载） | `subprocess` 查询 `dmesg` + 外部电子负载 | 是（日志标准） | 需外接可调电子负载拉高电流。Python 跨平台循环执行 `dmesg \| grep "over-current"` 捕捉标准内核 USB 过流保护日志。 |
+| M.2接口 | M-key SSD | 是 | `subprocess` 调用 `nvme-cli`、`smartctl` | 是 | **底层/通用性**：基于标准 PCIe/NVMe 驱动。Python 调用统一的系统工具获取温度、健康度及测速，逻辑跨平台完全一致。 |
+| M.2接口 | B-key 4G模块 | 是 | `pyserial` / `subprocess` 调用 `qmicli` | 是 | 同网络类 4G 模块。依赖 `/dev/ttyUSB*` 或 `/dev/cdc-wdm*` 标准节点，控制代码一致。 |
+| M.2接口 | E-key WIFI模块 | 是 | 同 WLAN 控制方法 | 是 | 插入加载驱动后即变为标准网卡（如 `wlan0`），后续用 Python 调用的配置与测速逻辑全平台统一。 |
+| 显示接口 | USB-C显示 | 是 | `subprocess` 调用 `modetest` / `xrandr` | 中 | **底层/通用性**：均映射为标准 DRM (Direct Rendering Manager) 节点。<br>**平台差异**：DP Alt-mode 严重依赖原厂 PHY 驱动支持情况，且受桌面环境（X11/Wayland）影响，通常推荐无桌面下用 `modetest` 解析。 |
+| 显示接口 | HDMI显示 | 是 | 读取 `/sys/class/drm/` 解析状态 | 是 | **底层/通用性**：遵循 Linux sysfs 标准。Python 跨平台直接读取对应节点的 `status` 文件检测拔插，读 `edid` 文件解析分辨率。 |
+| 通信协议 | I2C（EEPROM测试） | 是 | `smbus2` | 是 | **底层/通用性**：依赖内核标准 `i2c-dev` (`/dev/i2c-*`)。`smbus2` 使得 Python API (如读写字节) 跨平台**完全一致**。<br>**平台差异**：仅需在 Python 中修改**总线编号参数**（如 RPi 传 1，Jetson 传 8）。 |
+| 通信协议 | CAN总线 | 是 | `python-can` | 是 | **底层/通用性**：依赖内核标准 `SocketCAN` (`can0` 等)。`python-can` 底层对接该协议，收发 API **完全一致**。<br>**平台差异**：Jetson/RK 有原生 CAN，RPi 需外接 MCP2515，但只要内核成功映射出 `can0`，Python 代码一行不用改。 |
+| 通信协议 | RS485/RS232/RS422 | 是 | `pyserial` | 是 | **底层/通用性**：依赖内核标准 `tty` 驱动 (`/dev/ttyS*`)。`pyserial` API **完全通用**。<br>**平台差异**：除串口路径字符串不同外，RS485 若无硬件自动收发切换，需在 Python 中额外配置 RTS 引脚。 |
+| 通信协议 | SPI | 是 | `spidev` | 是 | **底层/通用性**：依赖内核标准 `spi-dev` (`/dev/spidevB.C`)。全双工数据流等 Python API **完全一致**。<br>**平台差异**：仅总线/片选参数不同。注：RK/Jetson 默认往往在 DTS 中禁用了 SPI，需人为开启生成节点后，代码才能通用。 |
+| 通信协议 | UART（速率、稳定、距离） | 是 | `pyserial` | 是 | 同 RS232。Python 动态调整 `baudrate` 循环握手，或进行 Rx/Tx 短接的大数据量 loopback 校验测试。逻辑与 API 全平台通用。 |
+| 相机类 | CSI接口 | 是 | `OpenCV` / `v4l2-ctl` | 差（ISP强相关） | **底层/通用性**：均注册为标准 `/dev/video*` (V4L2)。<br>**平台差异巨大**：尽管节点标准，但 Python 的取流管线完全不同。RPi 需 `libcamera` 包装；Jetson 必须用 GStreamer (`nvarguscamerasrc`) 调动硬件 ISP；RK 需专属插件。代码无法通用。 |
+| 相机类 | GMSL接口 | 是 | GStreamer (Python API) | 否（重度依赖原厂） | GMSL 是强硬件相关方案（如 MAX9296 解串器）。测试极度依赖原厂（NVIDIA/Rockchip）提供的定制化 GStreamer 硬件加速流管道，Python 只能通过组装不同平台的专属 Gst 字符串来测试。 |
+| RTC（实时时钟） | 掉电保护时间测试 | 是 | `subprocess` 调用 `hwclock` | 是 | **底层/通用性**：操作统一的 `/dev/rtc0` 标准节点。<br>**通用测试逻辑**：Python 写时间 (`hwclock -w`) -> 外部物理断电静置 -> 上电后 Python 读时间 (`hwclock -r`) 并计算漂移。代码完全通用。 |
+| 音频类 | Microphone | 是 | `pyaudio` / `sounddevice` | 是 | **底层/通用性**：依赖内核 ALSA 音频子系统。`pyaudio` 录音与底噪分析的 API 跨平台**完全一致**。<br>**平台差异**：无论用哪种音频芯片，只要声卡驱动就绪，仅需在 Python 中修改**设备索引号 (Index)** 即可通用。 |
+| 音频类 | I2S | 是 | `pyaudio` | 是 | 同 Microphone。I2S 是底层数字连线方式，只要 DTS 成功将其与 Codec 芯片绑定并注册为 ALSA 标准声卡，上层 Python 测试代码即与普通 USB 音频一模一样，传参修改设备 Index 即可。 |

@@ -1,0 +1,56 @@
+{
+  "profile_name": "rk3576",
+  "platform": "linux",
+  "supported_cases": [
+    "eth_case",
+    "uart_case",
+    "rtc_case",
+    "gpio_case",
+    "i2c_case"
+  ],
+  "interfaces": {
+    "eth": [
+      "end0",
+      "eth0"
+    ],
+    "uart": [
+      "/dev/ttyS0",
+      "/dev/ttyUSB0"
+    ],
+    "gpio": [
+      "/dev/gpiochip0"
+    ],
+    "i2c": [
+      "/dev/i2c-0",
+      "/dev/i2c-2"
+    ],
+    "rtc": [
+      "/dev/rtc0"
+    ]
+  },
+  "capabilities": {
+    "network": {
+      "ping": true
+    },
+    "serial": {
+      "loopback": true
+    }
+  },
+  "tools_required": [
+    "ip",
+    "ping",
+    "ethtool"
+  ],
+  "metadata": {
+    "vendor": "Seeed",
+    "board_family": "rk3576",
+    "gpio_mapping": {
+      "7": 51,
+      "8": 28,
+      "10": 29,
+      "11": 52,
+      "13": 80,
+      "15": 53
+    }
+  }
+}

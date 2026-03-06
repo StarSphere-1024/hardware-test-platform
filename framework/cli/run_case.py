@@ -31,6 +31,10 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
             workspace_root=args.workspace_root,
             artifacts_root=args.artifacts_root,
             function_registry=function_registry,
+            dashboard_enabled=args.dashboard,
+            dashboard_refresh_interval=args.dashboard_refresh,
+            dashboard_start_monitor=not args.dashboard_no_monitor,
+            dashboard_keep_open=args.dashboard_keep_open,
         )
         print_payload(payload)
         return payload_exit_code(payload)

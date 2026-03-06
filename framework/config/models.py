@@ -45,6 +45,8 @@ class RuntimeDefaults(SerializableModel):
 class ObservabilityConfig(SerializableModel):
     report_enabled: bool = True
     dashboard_enabled: bool = False
+    dashboard_auto_exit_on_success_seconds: int | None = 3
+    dashboard_auto_exit_on_failure_seconds: int | None = None
 
 
 @dataclass(slots=True)

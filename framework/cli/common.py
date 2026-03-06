@@ -6,6 +6,8 @@ import argparse
 import importlib
 import importlib.util
 import json
+import sys
+import threading
 import uuid
 from pathlib import Path
 from typing import Any, Callable
@@ -45,6 +47,10 @@ def create_base_parser(description: str) -> argparse.ArgumentParser:
     parser.add_argument("--stop-on-failure", action="store_true", help="stop on first failure")
     parser.add_argument("--report-enabled", dest="report_enabled", action="store_true", default=None, help="force report generation")
     parser.add_argument("--no-report", dest="report_enabled", action="store_false", help="disable report generation")
+    parser.add_argument("--dashboard", action="store_true", help="attach terminal dashboard during execution")
+    parser.add_argument("--dashboard-refresh", type=float, default=1.0, help="dashboard refresh interval in seconds")
+    parser.add_argument("--dashboard-no-monitor", action="store_true", help="disable system monitoring in attached dashboard")
+    parser.add_argument("--dashboard-keep-open", action="store_true", help="keep dashboard open after execution until manual quit")
     return parser
 
 
@@ -239,6 +245,10 @@ def execute_plan(
     workspace_root: str | Path,
     artifacts_root: str | Path | None,
     function_registry: dict[str, Callable[..., Any]] | None = None,
+    dashboard_enabled: bool = False,
+    dashboard_refresh_interval: float = 1.0,
+    dashboard_start_monitor: bool = True,
+    dashboard_keep_open: bool = False,
 ) -> dict[str, Any]:
     workspace = Path(workspace_root).resolve()
     outputs_root = Path(artifacts_root).resolve() if artifacts_root else workspace
@@ -275,8 +285,18 @@ def execute_plan(
     }
     registry.update(discover_workspace_functions(workspace, {name for name in missing_function_names if isinstance(name, str)}))
 
-    root_result = Scheduler(FunctionExecutor(registry)).run(plan, context)
-    return {
+    root_result, dashboard_meta = _run_scheduler(
+        registry=registry,
+        plan=plan,
+        context=context,
+        workspace_root=workspace,
+        outputs_root=outputs_root,
+        dashboard_enabled=dashboard_enabled,
+        dashboard_refresh_interval=dashboard_refresh_interval,
+        dashboard_start_monitor=dashboard_start_monitor,
+        dashboard_keep_open=dashboard_keep_open,
+    )
+    payload = {
         "request_id": context.request_id,
         "plan_id": plan.plan_id,
         "status": str(root_result.status.value if hasattr(root_result.status, "value") else root_result.status),
@@ -286,6 +306,106 @@ def execute_plan(
         "report_paths": [artifact.uri for artifact in root_result.artifacts],
         "log_path": str(logs_dir / f"{context.request_id}.log"),
     }
+    if dashboard_meta is not None:
+        payload["dashboard"] = dashboard_meta
+    return payload
+
+
+def _run_scheduler(
+    *,
+    registry: dict[str, Callable[..., Any]],
+    plan: ExecutionPlan,
+    context: ExecutionContext,
+    workspace_root: Path,
+    outputs_root: Path,
+    dashboard_enabled: bool,
+    dashboard_refresh_interval: float,
+    dashboard_start_monitor: bool,
+    dashboard_keep_open: bool,
+):
+    scheduler = Scheduler(FunctionExecutor(registry))
+    if not dashboard_enabled:
+        return scheduler.run(plan, context), None
+
+    result_box: dict[str, Any] = {}
+    error_box: dict[str, BaseException] = {}
+
+    def _worker() -> None:
+        try:
+            result_box["result"] = scheduler.run(plan, context)
+        except BaseException as error:  # pragma: no cover - surfaced after join
+            error_box["error"] = error
+
+    worker = threading.Thread(target=_worker, name=f"dashboard-exec-{context.request_id}", daemon=True)
+    worker.start()
+    observability_config = context.resolved_config.global_config.observability
+    dashboard_meta = _attach_dashboard(
+        request_id=context.request_id,
+        fixture_name=str(context.resolved_config.fixture.fixture_name if context.resolved_config.fixture else ""),
+        workspace_root=workspace_root,
+        outputs_root=outputs_root,
+        refresh_interval=dashboard_refresh_interval,
+        start_monitor=dashboard_start_monitor,
+        keep_open=dashboard_keep_open,
+        success_exit_linger_seconds=observability_config.dashboard_auto_exit_on_success_seconds,
+        failure_exit_linger_seconds=observability_config.dashboard_auto_exit_on_failure_seconds,
+    )
+    worker.join()
+
+    error = error_box.get("error")
+    if error is not None:
+        raise error
+    return result_box["result"], dashboard_meta
+
+
+def _attach_dashboard(
+    *,
+    request_id: str,
+    fixture_name: str,
+    workspace_root: Path,
+    outputs_root: Path,
+    refresh_interval: float,
+    start_monitor: bool,
+    keep_open: bool,
+    success_exit_linger_seconds: float | None,
+    failure_exit_linger_seconds: float | None,
+) -> dict[str, Any]:
+    metadata = {
+        "enabled": True,
+        "request_id": request_id,
+        "fixture": fixture_name,
+        "mode": "attached",
+        "artifacts_root": str(outputs_root),
+        "attached": False,
+    }
+    if keep_open:
+        success_exit_linger_seconds = None
+        failure_exit_linger_seconds = None
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        metadata["reason"] = "non-interactive terminal"
+        return metadata
+
+    try:
+        from framework.dashboard import run_dashboard
+
+        run_dashboard(
+            workspace_root=workspace_root,
+            artifacts_root=outputs_root,
+            fixture_name=fixture_name,
+            request_id=request_id,
+            refresh_interval=refresh_interval,
+            start_monitor=start_monitor,
+            auto_exit=success_exit_linger_seconds is not None or failure_exit_linger_seconds is not None,
+            success_exit_linger_seconds=success_exit_linger_seconds,
+            failure_exit_linger_seconds=failure_exit_linger_seconds,
+        )
+        metadata["attached"] = True
+        metadata["auto_exit"] = success_exit_linger_seconds is not None or failure_exit_linger_seconds is not None
+        metadata["success_exit_linger_seconds"] = success_exit_linger_seconds
+        metadata["failure_exit_linger_seconds"] = failure_exit_linger_seconds
+    except Exception as error:  # pragma: no cover - dashboard should not fail execution
+        metadata["reason"] = str(error)
+    return metadata
 
 
 def print_payload(payload: dict[str, Any]) -> None:

@@ -187,6 +187,9 @@ class CLIDashboard:
         refresh_interval: float = 1.0,
         fixture_name: str = "",
         request_id: str = "",
+        auto_exit: bool = False,
+        success_exit_linger_seconds: float | None = 3.0,
+        failure_exit_linger_seconds: float | None = None,
     ) -> None:
         self.workspace_root = Path(workspace_root).resolve()
         self.tmp_dir = Path(tmp_dir).resolve()
@@ -204,7 +207,12 @@ class CLIDashboard:
         self._running = False
         self._fixture_name = fixture_name
         self._request_id = request_id
+        self._auto_exit = auto_exit
+        self._success_exit_linger_seconds = success_exit_linger_seconds
+        self._failure_exit_linger_seconds = failure_exit_linger_seconds
         self._start_time: datetime | None = None
+        self._completed_at: datetime | None = None
+        self._completed_status: str | None = None
         self._view_mode = "main"
         self._last_action = ""
         self._pending_snapshot = False
@@ -258,6 +266,7 @@ class CLIDashboard:
                         if not self._running:
                             break
                         layout = self._generate_layout()
+                        self._update_auto_exit_state()
                         live.update(layout, refresh=True)
                         if self._pending_snapshot:
                             self._save_snapshot(layout)
@@ -281,6 +290,39 @@ class CLIDashboard:
             self._view_mode = "main" if self._view_mode == "logs" else "logs"
         elif key == "s":
             self._pending_snapshot = True
+
+    def _update_auto_exit_state(self) -> None:
+        if not self._auto_exit:
+            return
+
+        snapshot = self.data_source.read_snapshot(self._request_id or None)
+        status = str(snapshot.get("current_status", "pending"))
+        if status in {"passed", "failed", "timeout", "aborted", "skipped"}:
+            linger_seconds = self._linger_seconds_for_status(status)
+            if linger_seconds is None:
+                self._completed_at = None
+                self._completed_status = status
+                self._last_action = f"execution completed: {status}, waiting for manual quit"
+                return
+            if self._completed_at is None or self._completed_status != status:
+                self._completed_at = datetime.now()
+                self._completed_status = status
+                self._last_action = f"execution completed: {status}"
+                return
+            elapsed = (datetime.now() - self._completed_at).total_seconds()
+            if elapsed >= linger_seconds:
+                self._running = False
+            return
+
+        self._completed_at = None
+        self._completed_status = None
+
+    def _linger_seconds_for_status(self, status: str) -> float | None:
+        if status in {"passed", "skipped"}:
+            return self._success_exit_linger_seconds
+        if status in {"failed", "timeout", "aborted"}:
+            return self._failure_exit_linger_seconds
+        return None
 
     def _generate_layout(self) -> Layout:
         if self._view_mode == "debug":
@@ -512,6 +554,9 @@ def run_dashboard(
     request_id: str = "",
     refresh_interval: float = 1.0,
     start_monitor: bool = True,
+    auto_exit: bool = False,
+    success_exit_linger_seconds: float | None = 3.0,
+    failure_exit_linger_seconds: float | None = None,
 ) -> None:
     outputs_root = Path(artifacts_root).resolve()
     dashboard = CLIDashboard(
@@ -522,6 +567,9 @@ def run_dashboard(
         refresh_interval=refresh_interval,
         fixture_name=fixture_name,
         request_id=request_id,
+        auto_exit=auto_exit,
+        success_exit_linger_seconds=success_exit_linger_seconds,
+        failure_exit_linger_seconds=failure_exit_linger_seconds,
     )
     try:
         dashboard.start(start_monitor=start_monitor)

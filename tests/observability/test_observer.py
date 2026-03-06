@@ -17,8 +17,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 def test_scheduler_writes_events_snapshots_logs_and_reports(tmp_path: Path) -> None:
     resolver = ConfigResolver(REPO_ROOT)
     resolved = resolver.resolve_fixture(
-        "fixtures/quick_validation.json",
-        request={"kind": "fixture", "request_id": "req-obs-001", "fixture_path": "fixtures/quick_validation.json"},
+        "fixtures/linux_host_pc.json",
+        request={"kind": "fixture", "request_id": "req-obs-001", "fixture_path": "fixtures/linux_host_pc.json"},
     )
     plan = FixtureRunner().build_plan(resolved)
 
@@ -68,7 +68,7 @@ def test_scheduler_writes_events_snapshots_logs_and_reports(tmp_path: Path) -> N
 
     snapshot_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
     assert snapshot_payload["current_status"] == "passed"
-    assert snapshot_payload["fixture"]["name"] == "quick_validation"
+    assert snapshot_payload["fixture"]["name"] == "linux_host_pc"
     assert snapshot_payload["counters"]["passed"] >= 1
 
     lines = event_log_path.read_text(encoding="utf-8").splitlines()
@@ -85,3 +85,37 @@ def test_scheduler_writes_events_snapshots_logs_and_reports(tmp_path: Path) -> N
     report_payload = json.loads(report_json.read_text(encoding="utf-8"))
     assert report_payload["result_snapshot"]["current_status"] == "passed"
     assert report_payload["metadata"]["event_count"] == len(events) - 1
+
+
+def test_observer_writes_live_case_summaries_before_fixture_finishes(tmp_path: Path) -> None:
+    resolver = ConfigResolver(REPO_ROOT)
+    resolved = resolver.resolve_fixture(
+        "fixtures/linux_host_pc.json",
+        request={"kind": "fixture", "request_id": "req-obs-live-001", "fixture_path": "fixtures/linux_host_pc.json"},
+    )
+    plan = FixtureRunner().build_plan(resolved)
+
+    observer = ExecutionObserver(
+        resolved_config=resolved,
+        result_store=ResultStore(tmp_path / "tmp"),
+        event_store=EventStore(tmp_path / "logs" / "events"),
+        report_generator=ReportGenerator(tmp_path / "reports"),
+        logger=UnifiedLogger(tmp_path / "logs"),
+    )
+
+    fixture_task = plan.root_task
+    case_task = next(task for task in plan.tasks if task.task_type == "case")
+    function_task = next(task for task in plan.tasks if task.parent_task_id == case_task.task_id and task.task_type == "function")
+
+    observer.on_plan_created(plan)
+    observer.on_task_started(fixture_task, plan_id=plan.plan_id)
+    observer.on_task_started(case_task, plan_id=plan.plan_id)
+    observer.on_task_started(function_task, plan_id=plan.plan_id, attempt=1, status_before="pending")
+
+    snapshot_payload = json.loads((tmp_path / "tmp" / "req-obs-live-001_snapshot.json").read_text(encoding="utf-8"))
+
+    assert snapshot_payload["current_status"] == "running"
+    assert snapshot_payload["cases"]
+    assert snapshot_payload["cases"][0]["name"] == "eth_case"
+    assert snapshot_payload["cases"][0]["status"] == "running"
+    assert snapshot_payload["cases"][0]["summary"]["running"] == 1

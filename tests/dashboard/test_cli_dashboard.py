@@ -27,10 +27,10 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
         artifacts_root / "tmp" / f"{request_id}_snapshot.json",
         {
             "request_id": request_id,
-            "plan_id": "plan.quick_validation",
+            "plan_id": "plan.linux_host_pc",
             "updated_at": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc).isoformat(),
             "current_status": "aborted",
-            "fixture": {"name": "quick_validation", "status": "aborted"},
+            "fixture": {"name": "linux_host_pc", "status": "aborted"},
             "cases": [
                 {"name": "eth_case", "status": "failed", "message": "ping failed", "summary": {"failed": 1}},
                 {"name": "uart_case", "status": "aborted", "message": "aborted by stop_on_failure", "summary": {"aborted": 1}},
@@ -48,7 +48,7 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
                 "sequence": 1,
                 "stored_at": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc).isoformat(),
                 "storage_metadata": {"source": "scheduler"},
-                "event": {"event_id": "evt-1", "request_id": request_id, "plan_id": "plan.quick_validation", "event_type": "task_retried", "timestamp": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc).isoformat(), "status": "warning", "task_name": "test_eth_ping", "message": "retrying"},
+                "event": {"event_id": "evt-1", "request_id": request_id, "plan_id": "plan.linux_host_pc", "event_type": "task_retried", "timestamp": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc).isoformat(), "status": "warning", "task_name": "test_eth_ping", "message": "retrying"},
             }
         ],
     )
@@ -71,7 +71,7 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
         logs_dir=artifacts_root / "logs",
         reports_dir=artifacts_root / "reports",
         request_id=request_id,
-        fixture_name="quick_validation",
+        fixture_name="linux_host_pc",
     )
 
     state = dashboard._collect_state()
@@ -99,3 +99,17 @@ def test_dashboard_data_source_selects_latest_snapshot_when_request_is_omitted(t
     snapshot = source.read_snapshot()
 
     assert snapshot["request_id"] == "req-new"
+
+
+def test_dashboard_auto_exit_policy_uses_success_and_failure_delays() -> None:
+    dashboard = CLIDashboard(
+        workspace_root=REPO_ROOT,
+        success_exit_linger_seconds=3.0,
+        failure_exit_linger_seconds=None,
+        auto_exit=True,
+    )
+
+    assert dashboard._linger_seconds_for_status("passed") == 3.0
+    assert dashboard._linger_seconds_for_status("skipped") == 3.0
+    assert dashboard._linger_seconds_for_status("failed") is None
+    assert dashboard._linger_seconds_for_status("aborted") is None

@@ -54,6 +54,7 @@ class ExecutionObserver:
         self.event_store = event_store
         self.report_generator = report_generator
         self.logger = logger.get_logger(str(resolved_config.request.get("request_id", resolved_config.request.get("kind", "request"))))
+        self.plan_tasks: dict[str, ExecutionTask] = {}
         self.task_states: dict[str, str] = {}
         self.task_results: dict[str, ExecutionResult] = {}
         self.latest_snapshot: ResultSnapshot | None = None
@@ -63,6 +64,7 @@ class ExecutionObserver:
         return str(self.resolved_config.request.get("request_id", self.resolved_config.request.get("kind", "request")))
 
     def on_plan_created(self, plan: ExecutionPlan) -> None:
+        self.plan_tasks = {task.task_id: task for task in plan.tasks}
         self._append_event(
             event_type=EventType.PLAN_CREATED,
             status=EventStatus.INFO,
@@ -213,7 +215,35 @@ class ExecutionObserver:
 
     def _build_case_summaries(self, root_result: ExecutionResult | None) -> list[dict[str, Any]]:
         if root_result is None:
-            return []
+            cases: list[dict[str, Any]] = []
+            for task in self.plan_tasks.values():
+                if task.task_type != "case":
+                    continue
+                case_result = self.task_results.get(task.task_id)
+                if case_result is not None:
+                    cases.append(
+                        {
+                            "task_id": case_result.task_id,
+                            "name": case_result.name,
+                            "status": normalize_status(case_result.status),
+                            "message": case_result.message,
+                            "summary": summarize_children(case_result.children),
+                        }
+                    )
+                    continue
+
+                child_statuses = self._collect_child_statuses(task.task_id)
+                inferred_status = self._infer_task_status(task.task_id, child_statuses)
+                cases.append(
+                    {
+                        "task_id": task.task_id,
+                        "name": task.name,
+                        "status": inferred_status,
+                        "message": self._infer_case_message(task.name, inferred_status, child_statuses),
+                        "summary": self._summarize_statuses(child_statuses),
+                    }
+                )
+            return cases
         cases: list[dict[str, Any]] = []
         for child in root_result.children:
             if child.task_type != "case":
@@ -228,6 +258,61 @@ class ExecutionObserver:
                 }
             )
         return cases
+
+    def _collect_child_statuses(self, parent_task_id: str) -> list[str]:
+        child_statuses: list[str] = []
+        for task in self.plan_tasks.values():
+            if task.parent_task_id != parent_task_id:
+                continue
+            result = self.task_results.get(task.task_id)
+            if result is not None:
+                child_statuses.append(normalize_status(result.status))
+                continue
+            state = self.task_states.get(task.task_id)
+            if state is not None:
+                child_statuses.append(state)
+        return child_statuses
+
+    def _infer_task_status(self, task_id: str, child_statuses: list[str]) -> str:
+        direct_state = self.task_states.get(task_id)
+        if direct_state is not None:
+            if direct_state == "retrying":
+                return "running"
+            if direct_state != "pending":
+                return direct_state
+
+        if any(status in {"running", "retrying"} for status in child_statuses):
+            return "running"
+        for terminal in ("failed", "timeout", "aborted"):
+            if terminal in child_statuses:
+                return terminal
+        if child_statuses and all(status == "passed" for status in child_statuses):
+            return "passed"
+        if child_statuses and all(status == "skipped" for status in child_statuses):
+            return "skipped"
+        return "pending"
+
+    def _summarize_statuses(self, statuses: list[str]) -> dict[str, int]:
+        summary: dict[str, int] = {}
+        for status in statuses:
+            normalized = "running" if status == "retrying" else status
+            summary[normalized] = summary.get(normalized, 0) + 1
+        return summary
+
+    def _infer_case_message(self, case_name: str, status: str, child_statuses: list[str]) -> str:
+        if child_statuses:
+            summary = self._summarize_statuses(child_statuses)
+            ordered = ", ".join(f"{key}={value}" for key, value in sorted(summary.items()))
+            if status == "running":
+                return f"case running: {ordered}"
+            if status == "pending":
+                return f"case pending: {case_name}"
+            return f"case in progress: {ordered}"
+        if status == "running":
+            return f"case running: {case_name}"
+        if status == "pending":
+            return f"case pending: {case_name}"
+        return f"case status: {status}"
 
     def _infer_current_status(self, counters: dict[str, int]) -> str:
         if counters.get("running") or counters.get("retrying"):

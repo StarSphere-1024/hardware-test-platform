@@ -47,6 +47,14 @@ def _optional_int(mapping: Mapping[str, Any], key: str, *, field_path: str, sour
         raise SchemaValidationError("expected int", field_path=field_path, source=source)
 
 
+def _optional_nullable_int(mapping: Mapping[str, Any], key: str, *, field_path: str, source: str | None) -> None:
+    value = mapping.get(key)
+    if value is None:
+        return
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SchemaValidationError("expected int or null", field_path=field_path, source=source)
+
+
 def _optional_list_of_strings(mapping: Mapping[str, Any], key: str, *, field_path: str, source: str | None) -> None:
     value = mapping.get(key)
     if value is None:
@@ -84,6 +92,18 @@ def validate_global_config_data(data: Any, *, source: str | None = None) -> None
         observability_mapping = _ensure_mapping(observability, field_path="observability", source=source)
         _optional_bool(observability_mapping, "report_enabled", field_path="observability.report_enabled", source=source)
         _optional_bool(observability_mapping, "dashboard_enabled", field_path="observability.dashboard_enabled", source=source)
+        _optional_nullable_int(
+            observability_mapping,
+            "dashboard_auto_exit_on_success_seconds",
+            field_path="observability.dashboard_auto_exit_on_success_seconds",
+            source=source,
+        )
+        _optional_nullable_int(
+            observability_mapping,
+            "dashboard_auto_exit_on_failure_seconds",
+            field_path="observability.dashboard_auto_exit_on_failure_seconds",
+            source=source,
+        )
 
 
 def validate_board_profile_data(data: Any, *, source: str | None = None) -> None:

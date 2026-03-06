@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import framework.cli.common as cli_common
 from framework.cli.run_case import main as run_case_main
 from framework.cli.run_fixture import main as run_fixture_main
 from framework.cli.run_function import main as run_function_main
@@ -19,7 +20,7 @@ def test_run_fixture_cli_executes_fixture_and_prints_paths(tmp_path: Path, capsy
             "--artifacts-root",
             str(tmp_path),
             "--config",
-            "fixtures/quick_validation.json",
+            "fixtures/linux_host_pc.json",
         ],
         function_registry={
             "test_eth_ping": lambda interface, target_ip: {"code": 0, "message": f"ping {target_ip} via {interface}"},
@@ -37,6 +38,54 @@ def test_run_fixture_cli_executes_fixture_and_prints_paths(tmp_path: Path, capsy
     assert Path(payload["snapshot_path"]).exists()
     assert Path(payload["event_log_path"]).exists()
     assert len(payload["report_paths"]) == 2
+
+
+def test_run_fixture_cli_can_attach_dashboard(tmp_path: Path, monkeypatch, capsys) -> None:
+    attached: dict[str, object] = {}
+
+    def fake_attach_dashboard(**kwargs):
+        attached.update(kwargs)
+        return {
+            "enabled": True,
+            "attached": True,
+            "request_id": kwargs["request_id"],
+            "fixture": kwargs["fixture_name"],
+            "mode": "attached",
+            "artifacts_root": str(kwargs["outputs_root"]),
+            "auto_exit": True,
+            "success_exit_linger_seconds": kwargs["success_exit_linger_seconds"],
+            "failure_exit_linger_seconds": kwargs["failure_exit_linger_seconds"],
+        }
+
+    monkeypatch.setattr(cli_common, "_attach_dashboard", fake_attach_dashboard)
+
+    exit_code = run_fixture_main(
+        [
+            "--workspace-root",
+            str(REPO_ROOT),
+            "--artifacts-root",
+            str(tmp_path),
+            "--config",
+            "fixtures/linux_host_pc.json",
+            "--dashboard",
+        ],
+        function_registry={
+            "test_eth_ping": lambda interface, target_ip: {"code": 0, "message": f"ping {target_ip} via {interface}"},
+            "test_uart_loopback": lambda port, baudrate, payload: {"code": 0, "message": f"loopback ok on {port}"},
+            "test_rtc_read": lambda rtc_device: {"code": 0, "message": f"rtc ok on {rtc_device}"},
+            "test_gpio_mapping": lambda physical_pin: {"code": 0, "message": f"gpio ok on {physical_pin}"},
+            "test_i2c_scan": lambda bus, scan_all: {"code": 0, "message": f"i2c ok on {bus}"},
+        },
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["dashboard"]["attached"] is True
+    assert attached["request_id"] == payload["request_id"]
+    assert attached["fixture_name"] == "linux_host_pc"
+    assert attached["success_exit_linger_seconds"] == 3
+    assert attached["failure_exit_linger_seconds"] is None
 
 
 def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -104,7 +153,7 @@ def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Pa
             "--artifacts-root",
             str(tmp_path / "artifacts"),
             "--config",
-            "fixtures/quick_validation.json",
+            "fixtures/linux_host_pc.json",
         ]
     )
 
@@ -113,13 +162,12 @@ def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Pa
     assert exit_code == 0
     assert payload["status"] == "passed"
     case_results = payload["result"]["children"]
-    assert len(case_results) == 5
+    assert len(case_results) == 4
     assert case_results[0]["children"][0]["name"] == "test_eth_ping"
     assert case_results[1]["children"][0]["name"] == "test_uart_loopback"
     assert case_results[1]["children"][0]["message"] == "loopback ok"
     assert case_results[2]["children"][0]["name"] == "test_rtc_read"
-    assert case_results[3]["children"][0]["name"] == "test_gpio_mapping"
-    assert case_results[4]["children"][0]["name"] == "test_i2c_scan"
+    assert case_results[3]["children"][0]["name"] == "test_i2c_scan"
 
 
 def test_run_case_cli_executes_case_request(tmp_path: Path, capsys) -> None:
@@ -130,7 +178,7 @@ def test_run_case_cli_executes_case_request(tmp_path: Path, capsys) -> None:
             "--artifacts-root",
             str(tmp_path),
             "--config",
-            "cases/eth_case.json",
+            "cases/linux_host_pc/eth_case.json",
             "--timeout",
             "15",
         ],
@@ -167,7 +215,7 @@ def test_run_case_cli_auto_discovers_real_eth_function(tmp_path: Path, monkeypat
             "--artifacts-root",
             str(tmp_path / "artifacts"),
             "--config",
-            "cases/eth_case.json",
+            "cases/linux_host_pc/eth_case.json",
             "--timeout",
             "15",
         ]
@@ -177,7 +225,7 @@ def test_run_case_cli_auto_discovers_real_eth_function(tmp_path: Path, monkeypat
 
     assert exit_code == 0
     assert payload["status"] == "passed"
-    assert payload["result"]["children"][0]["children"][0]["message"].startswith("ping 192.168.1.100 via")
+    assert payload["result"]["children"][0]["children"][0]["message"].startswith("ping 192.168.100.1 via")
     assert payload["result"]["children"][0]["children"][0]["metrics"]["avg_latency_ms"] == 0.321
 
 
@@ -204,7 +252,7 @@ def test_run_case_cli_auto_discovers_real_rtc_function(tmp_path: Path, monkeypat
             "--artifacts-root",
             str(tmp_path / "artifacts"),
             "--config",
-            "cases/rtc_case.json",
+            "cases/linux_host_pc/rtc_case.json",
         ]
     )
 
@@ -269,7 +317,7 @@ def test_run_case_cli_auto_discovers_real_i2c_function(tmp_path: Path, monkeypat
             "--artifacts-root",
             str(tmp_path / "artifacts"),
             "--config",
-            "cases/i2c_case.json",
+            "cases/linux_host_pc/i2c_case.json",
         ]
     )
 

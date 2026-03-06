@@ -18,7 +18,12 @@ from .validator import (
 _BUILTIN_GLOBAL_CONFIG: dict[str, Any] = {
     "product": {"sku": "UNKNOWN", "stage": "UNKNOWN", "board_profile": None},
     "runtime": {"default_timeout": 60, "default_retry": 0, "default_retry_interval": 0},
-    "observability": {"report_enabled": True, "dashboard_enabled": False},
+    "observability": {
+        "report_enabled": True,
+        "dashboard_enabled": False,
+        "dashboard_auto_exit_on_success_seconds": 3,
+        "dashboard_auto_exit_on_failure_seconds": None,
+    },
 }
 
 

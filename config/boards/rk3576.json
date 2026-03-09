@@ -10,11 +10,13 @@
   ],
   "interfaces": {
     "eth": [
+      "end1",
       "end0",
       "eth0"
     ],
     "uart": [
-      "/dev/ttyS0",
+      "/dev/ttyS4",
+      "/dev/ttyFIQ0",
       "/dev/ttyUSB0"
     ],
     "gpio": [
@@ -44,6 +46,7 @@
   "metadata": {
     "vendor": "Seeed",
     "board_family": "rk3576",
+    "case_directory": "cases/rk3576",
     "gpio_mapping": {
       "7": 51,
       "8": 28,

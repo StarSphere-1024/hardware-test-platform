@@ -1,0 +1,17 @@
+{
+  "fixture_name": "rk3576_smoke",
+  "description": "Remote smoke fixture for RK3576 board validation using board-local cases.",
+  "cases": [
+    "cases/rk3576/eth_case.json",
+    "cases/rk3576/uart_case.json",
+    "cases/rk3576/rtc_case.json",
+    "cases/rk3576/i2c_case.json",
+    "cases/rk3576/gpio_case.json"
+  ],
+  "execution": "sequential",
+  "stop_on_failure": false,
+  "report_enabled": true,
+  "timeout": 300,
+  "retry": 1,
+  "retry_interval": 3
+}

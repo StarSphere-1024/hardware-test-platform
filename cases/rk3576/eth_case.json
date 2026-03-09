@@ -1,0 +1,32 @@
+{
+  "case_name": "eth_case",
+  "module": "network",
+  "description": "RK3576 Ethernet validation case. Requires end0/end1 to be linked and the target IP to be reachable.",
+  "execution": "sequential",
+  "required_interfaces": {
+    "eth": {
+      "required": true,
+      "select": "auto"
+    }
+  },
+  "functions": [
+    {
+      "name": "test_eth_ping",
+      "params": {
+        "interface": "${resolved.interfaces.eth.primary}",
+        "target_ip": "192.168.100.1"
+      },
+      "expect": {
+        "pass_policy": "all",
+        "rules": [
+          {
+            "field": "success",
+            "operator": "eq",
+            "value": true,
+            "message": "ethernet peer must be reachable"
+          }
+        ]
+      }
+    }
+  ]
+}

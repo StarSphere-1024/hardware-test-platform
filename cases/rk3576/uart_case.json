@@ -17,6 +17,7 @@
         "baudrate": 115200,
         "payload": "rk3576-loopback"
       },
+      "retry": 0,
       "timeout": 5
     }
   ]

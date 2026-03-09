@@ -33,6 +33,9 @@ htmlcov/
 logs/
 tmp/
 reports/
+remote-artifacts/
+wheelhouse/
+.offline/
 *.report
 *.log.gz
 
@@ -46,3 +49,6 @@ reports/
 # OS
 .DS_Store
 Thumbs.db
+
+
+.github/prompts/

@@ -33,6 +33,7 @@ class CLIError(Exception):
 
 def create_base_parser(description: str) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
+    parser.add_argument("--request-id", default=None, help="explicit request id used for logs/tmp/reports correlation")
     parser.add_argument("--workspace-root", default=".", help="workspace root used for config resolution")
     parser.add_argument("--artifacts-root", default=None, help="output root for logs/tmp/reports")
     parser.add_argument("--global-config", default=None, help="override global config path")
@@ -67,7 +68,7 @@ def cli_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
 
 def build_execution_request(args: argparse.Namespace, *, target_type: str, target_name: str) -> ExecutionRequest:
     return ExecutionRequest(
-        request_id=f"req-{uuid.uuid4().hex[:12]}",
+        request_id=args.request_id or f"req-{uuid.uuid4().hex[:12]}",
         target_type=target_type,
         target_name=target_name,
         cli_overrides=cli_overrides_from_args(args),

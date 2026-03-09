@@ -1,6 +1,7 @@
 {
   "case_name": "i2c_case",
   "module": "i2c",
+  "board_profile": "rk3576",
   "description": "RK3576 I2C bus scan case.",
   "execution": "sequential",
   "required_interfaces": {

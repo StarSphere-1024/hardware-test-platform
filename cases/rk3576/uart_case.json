@@ -1,6 +1,7 @@
 {
   "case_name": "uart_case",
   "module": "uart",
+  "board_profile": "rk3576",
   "description": "RK3576 UART loopback validation case. Requires a loopback fixture on the selected serial port.",
   "execution": "sequential",
   "required_interfaces": {

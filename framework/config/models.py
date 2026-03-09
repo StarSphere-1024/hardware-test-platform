@@ -31,7 +31,7 @@ class SerializableModel:
 class ProductConfig(SerializableModel):
     sku: str
     stage: str
-    board_profile: str | None = None
+    default_board_profile: str | None = None
 
 
 @dataclass(slots=True)
@@ -57,8 +57,14 @@ class GlobalConfig(SerializableModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "GlobalConfig":
+        product_data = dict(data["product"])
+        product = ProductConfig(
+            sku=product_data["sku"],
+            stage=product_data["stage"],
+            default_board_profile=product_data.get("default_board_profile", product_data.get("board_profile")),
+        )
         return cls(
-            product=ProductConfig(**data["product"]),
+            product=product,
             runtime=RuntimeDefaults(**data.get("runtime", {})),
             observability=ObservabilityConfig(**data.get("observability", {})),
         )
@@ -118,6 +124,7 @@ class FunctionInvocationSpec(SerializableModel):
 class CaseSpec(SerializableModel):
     case_name: str
     module: str
+    board_profile: str | None = None
     description: str | None = None
     functions: list[FunctionInvocationSpec] = field(default_factory=list)
     execution: str = "sequential"
@@ -133,6 +140,7 @@ class CaseSpec(SerializableModel):
         return cls(
             case_name=data["case_name"],
             module=data["module"],
+            board_profile=data.get("board_profile"),
             description=data.get("description"),
             functions=[FunctionInvocationSpec.from_dict(item) for item in data.get("functions", [])],
             execution=data.get("execution", "sequential"),
@@ -148,6 +156,7 @@ class CaseSpec(SerializableModel):
 @dataclass(slots=True)
 class FixtureSpec(SerializableModel):
     fixture_name: str
+    board_profile: str | None = None
     description: str | None = None
     cases: list[str] = field(default_factory=list)
     execution: str = "sequential"
@@ -165,6 +174,7 @@ class FixtureSpec(SerializableModel):
     def from_dict(cls, data: dict[str, Any]) -> "FixtureSpec":
         return cls(
             fixture_name=data["fixture_name"],
+            board_profile=data.get("board_profile"),
             description=data.get("description"),
             cases=list(data.get("cases", [])),
             execution=data.get("execution", "sequential"),

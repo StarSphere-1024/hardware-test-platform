@@ -31,13 +31,14 @@ class CLIError(Exception):
         self.payload = dict(payload or {"error": message})
 
 
-def create_base_parser(description: str) -> argparse.ArgumentParser:
+def create_base_parser(description: str, *, include_board_profile: bool = False) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--request-id", default=None, help="explicit request id used for logs/tmp/reports correlation")
     parser.add_argument("--workspace-root", default=".", help="workspace root used for config resolution")
     parser.add_argument("--artifacts-root", default=None, help="output root for logs/tmp/reports")
     parser.add_argument("--global-config", default=None, help="override global config path")
-    parser.add_argument("--board-profile", default=None, help="explicit board profile name")
+    if include_board_profile:
+        parser.add_argument("--board-profile", default=None, help="explicit board profile name")
     parser.add_argument("--sn", default=None, help="serial number")
     parser.add_argument("--operator", default=None, help="operator name")
     parser.add_argument("--trigger-source", default="cli", help="request trigger source")
@@ -72,7 +73,7 @@ def build_execution_request(args: argparse.Namespace, *, target_type: str, targe
         target_type=target_type,
         target_name=target_name,
         cli_overrides=cli_overrides_from_args(args),
-        board_profile=args.board_profile,
+        board_profile=getattr(args, "board_profile", None),
         sn=args.sn,
         operator=args.operator,
         trigger_source=args.trigger_source,
@@ -84,7 +85,7 @@ def build_fixture_resolved_config(args: argparse.Namespace, request: ExecutionRe
     return resolver.resolve_fixture(
         args.config,
         global_config_path=args.global_config,
-        board_profile=args.board_profile,
+        board_profile=getattr(args, "board_profile", None),
         cli_overrides=request.cli_overrides,
         request=request.to_dict(),
     )
@@ -95,7 +96,7 @@ def build_case_resolved_config(args: argparse.Namespace, request: ExecutionReque
     return resolver.resolve_case(
         args.config,
         global_config_path=args.global_config,
-        board_profile=args.board_profile,
+        board_profile=getattr(args, "board_profile", None),
         cli_overrides=request.cli_overrides,
         request=request.to_dict(),
     )
@@ -111,7 +112,8 @@ def build_function_resolved_config(
     workspace_root = Path(args.workspace_root).resolve()
     loader = ConfigLoader(workspace_root)
     global_config, global_source = loader.load_global_config(args.global_config)
-    board_profile, board_source = loader.load_board_profile(profile_name=args.board_profile or global_config.product.board_profile)
+    board_profile_name = getattr(args, "board_profile", None) or global_config.product.default_board_profile
+    board_profile, board_source = loader.load_board_profile(profile_name=board_profile_name)
 
     timeout = args.timeout if args.timeout is not None else global_config.runtime.default_timeout
     retry = args.retry if args.retry is not None else global_config.runtime.default_retry

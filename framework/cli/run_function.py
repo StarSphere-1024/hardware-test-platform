@@ -19,7 +19,7 @@ from .common import (
 
 
 def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable[..., Any]] | None = None) -> int:
-    parser = create_base_parser("Execute a single function callable")
+    parser = create_base_parser("Execute a single function callable", include_board_profile=True)
     parser.add_argument("--callable", required=True, help="python callable path in module:function format")
     parser.add_argument("--params", default="{}", help="JSON object params for callable")
     args = parser.parse_args(argv)

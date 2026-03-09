@@ -2,7 +2,7 @@
   "product": {
     "sku": "RK3576_EVB",
     "stage": "DVT",
-    "board_profile": "linux_host_pc"
+    "default_board_profile": "linux_host_pc"
   },
   "runtime": {
     "default_timeout": 60,

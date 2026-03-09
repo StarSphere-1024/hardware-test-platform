@@ -1,6 +1,7 @@
 {
   "case_name": "rtc_case",
   "module": "rtc",
+  "board_profile": "rk3576",
   "description": "RK3576 RTC validation case.",
   "execution": "sequential",
   "required_interfaces": {

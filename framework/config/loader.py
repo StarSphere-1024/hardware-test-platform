@@ -16,7 +16,7 @@ from .validator import (
 )
 
 _BUILTIN_GLOBAL_CONFIG: dict[str, Any] = {
-    "product": {"sku": "UNKNOWN", "stage": "UNKNOWN", "board_profile": None},
+    "product": {"sku": "UNKNOWN", "stage": "UNKNOWN", "default_board_profile": None},
     "runtime": {"default_timeout": 60, "default_retry": 0, "default_retry_interval": 0},
     "observability": {
         "report_enabled": True,

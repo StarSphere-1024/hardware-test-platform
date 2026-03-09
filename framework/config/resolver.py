@@ -44,8 +44,9 @@ class ConfigResolver:
         overrides = self._validate_overrides(cli_overrides)
         global_config, global_source = self.loader.load_global_config(global_config_path)
         fixture, fixture_source = self.loader.load_fixture(fixture_path)
+        board_profile_name = overrides.get("board_profile") or board_profile or fixture.board_profile or global_config.product.default_board_profile
         board, board_source = self.loader.load_board_profile(
-            profile_name=overrides.get("board_profile") or board_profile or global_config.product.board_profile
+            profile_name=board_profile_name
         )
 
         case_sources: dict[str, str] = {}
@@ -53,6 +54,7 @@ class ConfigResolver:
         fixture_dir = Path(fixture_source).parent
         for case_ref in fixture.cases:
             case_spec, case_source = self.loader.load_case(case_ref, base_dir=fixture_dir)
+            self._assert_case_board_compatible(board.profile_name, fixture, case_spec, case_source)
             self._assert_case_supported(board, case_spec, case_source)
             raw_cases.append(case_spec)
             case_sources[case_spec.case_name] = case_source
@@ -93,10 +95,12 @@ class ConfigResolver:
     ) -> ResolvedExecutionConfig:
         overrides = self._validate_overrides(cli_overrides)
         global_config, global_source = self.loader.load_global_config(global_config_path)
-        board, board_source = self.loader.load_board_profile(
-            profile_name=overrides.get("board_profile") or board_profile or global_config.product.board_profile
-        )
         case_spec, case_source = self.loader.load_case(case_path)
+        board_profile_name = overrides.get("board_profile") or board_profile or case_spec.board_profile or global_config.product.default_board_profile
+        board, board_source = self.loader.load_board_profile(
+            profile_name=board_profile_name
+        )
+        self._assert_case_board_compatible(board.profile_name, None, case_spec, case_source)
         self._assert_case_supported(board, case_spec, case_source)
         resolved_interfaces = self._build_resolved_interfaces(board)
         context = self._build_template_context(global_config, board, resolved_interfaces)
@@ -137,6 +141,26 @@ class ConfigResolver:
             raise ProfileNotSupportedError(
                 f"case '{case_spec.case_name}' is not allowed by board profile '{board.profile_name}'",
                 field_path="supported_cases",
+                source=case_source,
+            )
+
+    def _assert_case_board_compatible(
+        self,
+        resolved_board_profile: str,
+        fixture: FixtureSpec | None,
+        case_spec: CaseSpec,
+        case_source: str,
+    ) -> None:
+        if fixture is not None and fixture.board_profile and case_spec.board_profile and fixture.board_profile != case_spec.board_profile:
+            raise ProfileNotSupportedError(
+                f"case '{case_spec.case_name}' declares board profile '{case_spec.board_profile}' but fixture '{fixture.fixture_name}' declares '{fixture.board_profile}'",
+                field_path="board_profile",
+                source=case_source,
+            )
+        if case_spec.board_profile and case_spec.board_profile != resolved_board_profile:
+            raise ProfileNotSupportedError(
+                f"case '{case_spec.case_name}' declares board profile '{case_spec.board_profile}' but resolved board profile is '{resolved_board_profile}'",
+                field_path="board_profile",
                 source=case_source,
             )
 
@@ -337,6 +361,7 @@ class ConfigResolver:
                 CaseSpec(
                     case_name=case_spec.case_name,
                     module=case_spec.module,
+                    board_profile=case_spec.board_profile,
                     description=case_spec.description,
                     functions=functions,
                     execution=case_execution,

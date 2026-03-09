@@ -5,11 +5,10 @@ REMOTE_HOST="${REMOTE_HOST:-192.168.100.91}"
 REMOTE_USER="${REMOTE_USER:-seeed}"
 REMOTE_PASS="${REMOTE_PASS:-seeed}"
 REMOTE_DIR="${REMOTE_DIR:-/home/seeed/hardware_test}"
-BOARD_PROFILE="${BOARD_PROFILE:-${REMOTE_BOARD_PROFILE:-rk3576}}"
 REQUEST_ID="req-remote-$(date +%s)-$RANDOM"
 
 usage() {
-  echo "Usage: $0 [--host H] [--user U] [--password P] [--remote-dir D] [--board-profile B] [fixture-name|fixture-path]"
+  echo "Usage: $0 [--host H] [--user U] [--password P] [--remote-dir D] [fixture-name|fixture-path]"
   echo "Examples:"
   echo "  $0 rk3576_smoke"
   echo "  $0 fixtures/rk3576_smoke.json"
@@ -31,8 +30,6 @@ while [[ $# -gt 0 ]]; do
       REMOTE_PASS="$2"; shift 2 ;;
     --remote-dir)
       REMOTE_DIR="$2"; shift 2 ;;
-    --board-profile)
-      BOARD_PROFILE="$2"; shift 2 ;;
     -h|--help)
       usage; exit 0 ;;
     *)
@@ -62,7 +59,6 @@ PYTHONUNBUFFERED=1 '${REMOTE_DIR}/venv/bin/python' -m framework.cli.run_fixture 
   --request-id '${REQUEST_ID}' \
   --workspace-root '${REMOTE_WORKSPACE}' \
   --artifacts-root '${REMOTE_WORKSPACE}' \
-  --board-profile '${BOARD_PROFILE}' \
   --config '${FIXTURE_PATH}' \
   --dashboard > '${REMOTE_STDOUT_PATH}' 2>&1 &
 fixture_pid=\$!

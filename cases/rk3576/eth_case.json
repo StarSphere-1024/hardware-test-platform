@@ -1,6 +1,7 @@
 {
   "case_name": "eth_case",
   "module": "network",
+  "board_profile": "rk3576",
   "description": "RK3576 Ethernet validation case. Requires end0/end1 to be linked and the target IP to be reachable.",
   "execution": "sequential",
   "required_interfaces": {

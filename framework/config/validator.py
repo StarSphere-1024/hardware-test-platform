@@ -78,6 +78,7 @@ def validate_global_config_data(data: Any, *, source: str | None = None) -> None
     product = _ensure_mapping(_require_field(root, "product", field_path="product", source=source), field_path="product", source=source)
     _require_string(product, "sku", field_path="product.sku", source=source)
     _require_string(product, "stage", field_path="product.stage", source=source)
+    _optional_string(product, "default_board_profile", field_path="product.default_board_profile", source=source)
     _optional_string(product, "board_profile", field_path="product.board_profile", source=source)
 
     runtime = root.get("runtime")
@@ -132,6 +133,7 @@ def validate_case_data(data: Any, *, source: str | None = None) -> None:
     root = _ensure_mapping(data, field_path="case", source=source)
     _require_string(root, "case_name", field_path="case_name", source=source)
     _require_string(root, "module", field_path="module", source=source)
+    _optional_string(root, "board_profile", field_path="board_profile", source=source)
     _validate_execution(root, "execution", field_path="execution", source=source)
     _optional_string(root, "description", field_path="description", source=source)
 
@@ -170,6 +172,7 @@ def validate_case_data(data: Any, *, source: str | None = None) -> None:
 def validate_fixture_data(data: Any, *, source: str | None = None) -> None:
     root = _ensure_mapping(data, field_path="fixture", source=source)
     _require_string(root, "fixture_name", field_path="fixture_name", source=source)
+    _optional_string(root, "board_profile", field_path="board_profile", source=source)
     _validate_execution(root, "execution", field_path="execution", source=source)
     _optional_string(root, "description", field_path="description", source=source)
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import framework.cli.common as cli_common
 from framework.cli.run_case import main as run_case_main
 from framework.cli.run_fixture import main as run_fixture_main
@@ -85,7 +87,7 @@ def test_run_fixture_cli_can_attach_dashboard(tmp_path: Path, monkeypatch, capsy
     assert attached["request_id"] == payload["request_id"]
     assert attached["fixture_name"] == "linux_host_pc"
     assert attached["success_exit_linger_seconds"] == 3
-    assert attached["failure_exit_linger_seconds"] is None
+    assert attached["failure_exit_linger_seconds"] == 5
 
 
 def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -285,7 +287,7 @@ def test_run_case_cli_auto_discovers_real_gpio_function(tmp_path: Path, monkeypa
             "--artifacts-root",
             str(tmp_path / "artifacts"),
             "--config",
-            "cases/gpio_case.json",
+            "cases/rk3576/gpio_case.json",
         ]
     )
 
@@ -374,3 +376,39 @@ def test_run_function_cli_rejects_invalid_params_json(capsys) -> None:
 
     assert exit_code == 2
     assert "error" in payload
+
+
+def test_run_case_cli_rejects_board_profile_argument(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        run_case_main(
+            [
+                "--workspace-root",
+                str(REPO_ROOT),
+                "--artifacts-root",
+                str(tmp_path),
+                "--config",
+                "cases/linux_host_pc/eth_case.json",
+                "--board-profile",
+                "linux_host_pc",
+            ]
+        )
+
+    assert exc_info.value.code == 2
+
+
+def test_run_fixture_cli_rejects_board_profile_argument(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        run_fixture_main(
+            [
+                "--workspace-root",
+                str(REPO_ROOT),
+                "--artifacts-root",
+                str(tmp_path),
+                "--config",
+                "fixtures/linux_host_pc.json",
+                "--board-profile",
+                "linux_host_pc",
+            ]
+        )
+
+    assert exc_info.value.code == 2

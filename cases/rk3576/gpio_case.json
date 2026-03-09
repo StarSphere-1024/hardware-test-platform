@@ -1,6 +1,7 @@
 {
   "case_name": "gpio_case",
   "module": "gpio",
+  "board_profile": "rk3576",
   "description": "RK3576 GPIO mapping validation case.",
   "execution": "sequential",
   "required_interfaces": {

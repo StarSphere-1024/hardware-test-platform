@@ -1,5 +1,6 @@
 {
   "fixture_name": "rk3576_smoke",
+  "board_profile": "rk3576",
   "description": "Remote smoke fixture for RK3576 board validation using board-local cases.",
   "cases": [
     "cases/rk3576/eth_case.json",

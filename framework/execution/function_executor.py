@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from datetime import datetime, timezone
 import inspect
+import threading
+import time
+from datetime import datetime, timezone
+from queue import Queue
 from typing import Any, Callable
+
+from concurrent.futures import TimeoutError as FutureTimeoutError
 
 from framework.domain.execution import ExecutionContext, ExecutionTask
 from framework.domain.results import ExecutionResult, ResultStatus
@@ -95,9 +98,25 @@ class FunctionExecutor:
         if timeout is None:
             return callable_obj(**invocation_params)
 
-        with ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(callable_obj, **invocation_params)
-            return future.result(timeout=timeout)
+        result_queue: Queue[tuple[str, Any]] = Queue(maxsize=1)
+
+        def runner() -> None:
+            try:
+                result_queue.put(("result", callable_obj(**invocation_params)))
+            except Exception as error:  # noqa: BLE001
+                result_queue.put(("error", error))
+
+        worker = threading.Thread(target=runner, daemon=True)
+        worker.start()
+        worker.join(timeout=timeout)
+
+        if worker.is_alive():
+            raise FutureTimeoutError()
+
+        kind, payload = result_queue.get_nowait()
+        if kind == "error":
+            raise payload
+        return payload
 
     def _build_invocation_params(
         self,

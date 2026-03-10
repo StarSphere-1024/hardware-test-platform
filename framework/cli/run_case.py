@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Callable
 
+from framework.config.errors import ConfigError, SchemaValidationError
 from framework.execution.fixture_runner import FixtureRunner
 
 from .common import (
@@ -15,6 +18,30 @@ from .common import (
     payload_exit_code,
     print_payload,
 )
+
+
+def _build_fixture_misuse_hint(args) -> str | None:
+    """Return a friendly hint when a fixture config is passed to run_case."""
+
+    config_path = Path(args.config)
+    if "fixtures" in config_path.parts:
+        return f"detected fixture config '{args.config}', use: python -m framework.cli.run_fixture --config {args.config}"
+
+    if not config_path.suffix.lower() == ".json":
+        return None
+
+    source_path = Path(args.workspace_root).resolve() / config_path
+    if not source_path.exists():
+        return None
+
+    try:
+        data = json.loads(source_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    if isinstance(data, dict) and "fixture_name" in data and "case_name" not in data:
+        return f"detected fixture config '{args.config}', use: python -m framework.cli.run_fixture --config {args.config}"
+    return None
 
 
 def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable[..., Any]] | None = None) -> int:
@@ -38,6 +65,14 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
         )
         print_payload(payload)
         return payload_exit_code(payload)
+    except ConfigError as error:
+        payload = {"error": str(error)}
+        if isinstance(error, SchemaValidationError) and error.field_path == "case_name":
+            hint = _build_fixture_misuse_hint(args)
+            if hint:
+                payload["hint"] = hint
+        print_payload(payload)
+        return 2
     except CLIError as error:
         print_payload(error.payload)
         return error.exit_code

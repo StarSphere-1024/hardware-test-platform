@@ -15,6 +15,16 @@
       "params": {
         "rtc_device": "${resolved.interfaces.rtc.primary}"
       },
+      "expect": {
+        "pass_policy": "all",
+        "rules": [
+          {
+            "field": "time",
+            "operator": "non_empty",
+            "message": "rtc must return a readable timestamp"
+          }
+        ]
+      },
       "timeout": 15
     }
   ]

@@ -16,6 +16,17 @@
       "params": {
         "physical_pin": 7
       },
+      "expect": {
+        "pass_policy": "all",
+        "rules": [
+          {
+            "field": "available",
+            "operator": "eq",
+            "value": true,
+            "message": "gpio mapping for the requested physical pin must exist"
+          }
+        ]
+      },
       "timeout": 10
     }
   ]

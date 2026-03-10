@@ -43,6 +43,14 @@ class FunctionExecutor:
         try:
             raw_result = self._invoke(callable_obj, params, task.timeout, context)
             status, code, message, details, metrics = self._normalize_result(raw_result)
+            status, code, message, details = self._apply_expectations(
+                task.payload.get("expect"),
+                status=status,
+                code=code,
+                message=message,
+                details=details,
+                metrics=metrics,
+            )
         except FutureTimeoutError:
             finished_at = datetime.now(timezone.utc)
             return ExecutionResult(
@@ -173,3 +181,133 @@ class FunctionExecutor:
             return status, code, message, details, metrics
 
         return ResultStatus.PASSED, 0, "success", {"result": raw_result}, {}
+
+    def _apply_expectations(
+        self,
+        expect: Any,
+        *,
+        status: ResultStatus,
+        code: int | None,
+        message: str | None,
+        details: dict[str, Any],
+        metrics: dict[str, float | int],
+    ) -> tuple[ResultStatus, int | None, str | None, dict[str, Any]]:
+        if not expect:
+            return status, code, message, details
+
+        rules = expect.get("rules") if isinstance(expect, dict) else None
+        if not isinstance(rules, list) or not rules:
+            return status, code, message, details
+
+        pass_policy = expect.get("pass_policy", "all") if isinstance(expect, dict) else "all"
+        rule_results: list[dict[str, Any]] = []
+
+        for rule in rules:
+            if not isinstance(rule, dict):
+                continue
+            field_path = str(rule.get("field", "")).strip()
+            operator = str(rule.get("operator", "eq")).strip()
+            expected_value = rule.get("value")
+            actual_value = self._resolve_expectation_field(
+                field_path,
+                status=status,
+                code=code,
+                message=message,
+                details=details,
+                metrics=metrics,
+            )
+            passed = self._evaluate_expectation(operator, actual_value, expected_value)
+            rule_results.append(
+                {
+                    "field": field_path,
+                    "operator": operator,
+                    "expected": expected_value,
+                    "actual": actual_value,
+                    "passed": passed,
+                    "message": rule.get("message"),
+                }
+            )
+
+        if not rule_results:
+            return status, code, message, details
+
+        expectations_met = any(item["passed"] for item in rule_results) if pass_policy == "any" else all(
+            item["passed"] for item in rule_results
+        )
+        if expectations_met:
+            details_with_expect = dict(details)
+            details_with_expect["expectation_results"] = rule_results
+            return status, code, message, details_with_expect
+
+        failure_messages = [item.get("message") for item in rule_results if not item["passed"] and item.get("message")]
+        details_with_expect = dict(details)
+        details_with_expect["expectation_results"] = rule_results
+        return (
+            ResultStatus.FAILED,
+            code if code not in (None, 0) else -1,
+            "; ".join(failure_messages) if failure_messages else "function result did not satisfy expect rules",
+            details_with_expect,
+        )
+
+    def _resolve_expectation_field(
+        self,
+        field_path: str,
+        *,
+        status: ResultStatus,
+        code: int | None,
+        message: str | None,
+        details: dict[str, Any],
+        metrics: dict[str, float | int],
+    ) -> Any:
+        envelope: dict[str, Any] = {
+            "status": status.value,
+            "code": code,
+            "message": message,
+            "details": details,
+            "metrics": metrics,
+        }
+        if not field_path:
+            return None
+        if "." in field_path:
+            current: Any = envelope
+            for part in field_path.split("."):
+                if not isinstance(current, dict) or part not in current:
+                    return None
+                current = current[part]
+            return current
+        if field_path in envelope:
+            return envelope[field_path]
+        if field_path in details:
+            return details[field_path]
+        if field_path in metrics:
+            return metrics[field_path]
+        return None
+
+    def _evaluate_expectation(self, operator: str, actual: Any, expected: Any) -> bool:
+        if operator == "eq":
+            return actual == expected
+        if operator == "ne":
+            return actual != expected
+        if operator == "gt":
+            return actual is not None and expected is not None and actual > expected
+        if operator == "gte":
+            return actual is not None and expected is not None and actual >= expected
+        if operator == "lt":
+            return actual is not None and expected is not None and actual < expected
+        if operator == "lte":
+            return actual is not None and expected is not None and actual <= expected
+        if operator == "contains":
+            try:
+                return expected in actual
+            except TypeError:
+                return False
+        if operator == "in":
+            try:
+                return actual in expected
+            except TypeError:
+                return False
+        if operator == "exists":
+            return actual is not None
+        if operator == "non_empty":
+            return actual not in (None, "", [], {}, ())
+        raise TaskExecutionError(f"unsupported expect operator: {operator}")

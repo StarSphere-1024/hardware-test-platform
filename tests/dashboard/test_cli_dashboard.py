@@ -113,3 +113,84 @@ def test_dashboard_auto_exit_policy_uses_success_and_failure_delays() -> None:
     assert dashboard._linger_seconds_for_status("skipped") == 3.0
     assert dashboard._linger_seconds_for_status("failed") is None
     assert dashboard._linger_seconds_for_status("aborted") is None
+
+
+def test_dashboard_recent_failures_prefers_failed_function_messages(tmp_path: Path) -> None:
+    request_id = "req-dash-failures"
+    artifacts_root = tmp_path / "artifacts"
+    _write_json(
+        artifacts_root / "tmp" / f"{request_id}_snapshot.json",
+        {
+            "request_id": request_id,
+            "plan_id": "plan.rk3576_smoke",
+            "updated_at": datetime(2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc).isoformat(),
+            "current_status": "failed",
+            "fixture": {"name": "rk3576_smoke", "status": "failed"},
+            "cases": [
+                {"name": "eth_case", "status": "failed", "message": "case completed: failed=1", "summary": {"failed": 1}},
+                {"name": "uart_case", "status": "timeout", "message": "case completed: timeout=1", "summary": {"timeout": 1}},
+            ],
+            "counters": {"failed": 1, "timeout": 1},
+            "status_summary": {"failed": 1, "timeout": 1},
+            "runtime_state": {},
+            "results": [
+                {
+                    "task_id": "fixture.0.rk3576_smoke",
+                    "task_type": "fixture",
+                    "name": "rk3576_smoke",
+                    "status": "failed",
+                    "children": [
+                        {
+                            "task_id": "case.0.eth_case",
+                            "task_type": "case",
+                            "name": "eth_case",
+                            "status": "failed",
+                            "message": "case completed: failed=1",
+                            "children": [
+                                {
+                                    "task_id": "function.eth.0.test_eth_ping",
+                                    "task_type": "function",
+                                    "name": "test_eth_ping",
+                                    "status": "failed",
+                                    "message": "ethernet peer must be reachable",
+                                }
+                            ],
+                        },
+                        {
+                            "task_id": "case.1.uart_case",
+                            "task_type": "case",
+                            "name": "uart_case",
+                            "status": "timeout",
+                            "message": "case completed: timeout=1",
+                            "children": [
+                                {
+                                    "task_id": "function.uart.0.test_uart_loopback",
+                                    "task_type": "function",
+                                    "name": "test_uart_loopback",
+                                    "status": "timeout",
+                                    "message": "function 'test_uart_loopback' timed out after 5s",
+                                }
+                            ],
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+
+    dashboard = CLIDashboard(
+        workspace_root=REPO_ROOT,
+        tmp_dir=artifacts_root / "tmp",
+        logs_dir=artifacts_root / "logs",
+        reports_dir=artifacts_root / "reports",
+        request_id=request_id,
+        fixture_name="rk3576_smoke",
+    )
+
+    state = dashboard._collect_state()
+    panel = dashboard._create_recent_failures_panel(state)
+    rendered = str(panel.renderable)
+
+    assert "eth_case / test_eth_ping: ethernet peer must be reachable" in rendered
+    assert "uart_case / test_uart_loopback: function 'test_uart_loopback' timed out after 5s" in rendered
+    assert "case completed: failed=1" not in rendered

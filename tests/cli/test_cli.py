@@ -14,6 +14,38 @@ from framework.cli.run_function import main as run_function_main
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _mock_function_registry() -> dict[str, object]:
+    return {
+        "test_eth_ping": lambda interface, target_ip: {
+            "code": 0,
+            "message": f"ping {target_ip} via {interface}",
+            "details": {"success": True, "interface": interface, "target_ip": target_ip},
+            "metrics": {"packet_loss": 0.0},
+        },
+        "test_uart_loopback": lambda port, baudrate, payload: {
+            "code": 0,
+            "message": f"loopback ok on {port}",
+            "details": {"received": payload, "port": port},
+        },
+        "test_rtc_read": lambda rtc_device: {
+            "code": 0,
+            "message": f"rtc ok on {rtc_device}",
+            "details": {"time": "2026-03-10T10:00:00+00:00", "rtc_device": rtc_device},
+        },
+        "test_gpio_mapping": lambda physical_pin: {
+            "code": 0,
+            "message": f"gpio ok on {physical_pin}",
+            "details": {"available": True, "physical_pin": physical_pin},
+        },
+        "test_i2c_scan": lambda bus, scan_all: {
+            "code": 0,
+            "message": f"i2c ok on {bus}",
+            "metrics": {"bus_count": 1},
+            "details": {"requested_bus": bus, "scan_all": scan_all},
+        },
+    }
+
+
 def test_run_fixture_cli_executes_fixture_and_prints_paths(tmp_path: Path, capsys) -> None:
     exit_code = run_fixture_main(
         [
@@ -24,13 +56,7 @@ def test_run_fixture_cli_executes_fixture_and_prints_paths(tmp_path: Path, capsy
             "--config",
             "fixtures/linux_host_pc.json",
         ],
-        function_registry={
-            "test_eth_ping": lambda interface, target_ip: {"code": 0, "message": f"ping {target_ip} via {interface}"},
-            "test_uart_loopback": lambda port, baudrate, payload: {"code": 0, "message": f"loopback ok on {port}"},
-            "test_rtc_read": lambda rtc_device: {"code": 0, "message": f"rtc ok on {rtc_device}"},
-            "test_gpio_mapping": lambda physical_pin: {"code": 0, "message": f"gpio ok on {physical_pin}"},
-            "test_i2c_scan": lambda bus, scan_all: {"code": 0, "message": f"i2c ok on {bus}"},
-        },
+        function_registry=_mock_function_registry(),
     )
 
     payload = json.loads(capsys.readouterr().out)
@@ -71,13 +97,7 @@ def test_run_fixture_cli_can_attach_dashboard(tmp_path: Path, monkeypatch, capsy
             "fixtures/linux_host_pc.json",
             "--dashboard",
         ],
-        function_registry={
-            "test_eth_ping": lambda interface, target_ip: {"code": 0, "message": f"ping {target_ip} via {interface}"},
-            "test_uart_loopback": lambda port, baudrate, payload: {"code": 0, "message": f"loopback ok on {port}"},
-            "test_rtc_read": lambda rtc_device: {"code": 0, "message": f"rtc ok on {rtc_device}"},
-            "test_gpio_mapping": lambda physical_pin: {"code": 0, "message": f"gpio ok on {physical_pin}"},
-            "test_i2c_scan": lambda bus, scan_all: {"code": 0, "message": f"i2c ok on {bus}"},
-        },
+        function_registry=_mock_function_registry(),
     )
 
     payload = json.loads(capsys.readouterr().out)
@@ -86,8 +106,8 @@ def test_run_fixture_cli_can_attach_dashboard(tmp_path: Path, monkeypatch, capsy
     assert payload["dashboard"]["attached"] is True
     assert attached["request_id"] == payload["request_id"]
     assert attached["fixture_name"] == "linux_host_pc"
-    assert attached["success_exit_linger_seconds"] == 3
-    assert attached["failure_exit_linger_seconds"] == 5
+    assert attached["success_exit_linger_seconds"] is None
+    assert attached["failure_exit_linger_seconds"] is None
 
 
 def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -185,7 +205,12 @@ def test_run_case_cli_executes_case_request(tmp_path: Path, capsys) -> None:
             "15",
         ],
         function_registry={
-            "test_eth_ping": lambda interface, target_ip: {"code": 0, "message": f"ping {target_ip} via {interface}"},
+            "test_eth_ping": lambda interface, target_ip: {
+                "code": 0,
+                "message": f"ping {target_ip} via {interface}",
+                "details": {"success": True, "interface": interface, "target_ip": target_ip},
+                "metrics": {"packet_loss": 0.0},
+            }
         },
     )
 
@@ -394,6 +419,24 @@ def test_run_case_cli_rejects_board_profile_argument(tmp_path: Path) -> None:
         )
 
     assert exc_info.value.code == 2
+
+
+def test_run_case_cli_reports_hint_when_fixture_config_passed(capsys) -> None:
+    exit_code = run_case_main(
+        [
+            "--workspace-root",
+            str(REPO_ROOT),
+            "--config",
+            "fixtures/rk3576_smoke.json",
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 2
+    assert "hint" in payload
+    assert "run_fixture" in payload["hint"]
+    assert "fixtures/rk3576_smoke.json" in payload["hint"]
 
 
 def test_run_fixture_cli_rejects_board_profile_argument(tmp_path: Path) -> None:

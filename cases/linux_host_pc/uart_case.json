@@ -17,6 +17,17 @@
         "baudrate": 115200,
         "payload": "phase-a"
       },
+      "expect": {
+        "pass_policy": "all",
+        "rules": [
+          {
+            "field": "received",
+            "operator": "eq",
+            "value": "phase-a",
+            "message": "uart must echo the configured payload"
+          }
+        ]
+      },
       "timeout": 45
     }
   ]

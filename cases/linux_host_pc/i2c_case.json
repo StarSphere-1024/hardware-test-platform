@@ -16,6 +16,17 @@
         "bus": "${resolved.interfaces.i2c.primary}",
         "scan_all": true
       },
+      "expect": {
+        "pass_policy": "all",
+        "rules": [
+          {
+            "field": "bus_count",
+            "operator": "gte",
+            "value": 1,
+            "message": "i2c scan must find at least one accessible bus"
+          }
+        ]
+      },
       "timeout": 15
     }
   ]

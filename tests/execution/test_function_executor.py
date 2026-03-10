@@ -49,3 +49,81 @@ def test_function_executor_returns_timeout_without_waiting_for_worker_completion
     assert result.status == ResultStatus.TIMEOUT
     assert result.code == 1
     assert elapsed < 0.2
+
+
+def test_function_executor_fails_when_expect_rules_are_not_met() -> None:
+    executor = FunctionExecutor(
+        {
+            "loopback_function": lambda: {
+                "code": 0,
+                "status": "passed",
+                "message": "loopback ok",
+                "details": {"received": "wrong-payload"},
+            }
+        }
+    )
+    task = ExecutionTask(
+        task_id="function.loopback_function",
+        task_type="function",
+        name="loopback_function",
+        payload={
+            "function_name": "loopback_function",
+            "params": {},
+            "expect": {
+                "pass_policy": "all",
+                "rules": [
+                    {
+                        "field": "received",
+                        "operator": "eq",
+                        "value": "phase-a",
+                        "message": "uart must echo the configured payload",
+                    }
+                ],
+            },
+        },
+    )
+
+    result = executor.execute(task, _build_context())
+
+    assert result.status == ResultStatus.FAILED
+    assert result.code == -1
+    assert result.message == "uart must echo the configured payload"
+    assert result.details["expectation_results"][0]["passed"] is False
+
+
+def test_function_executor_preserves_success_when_expect_rules_are_met() -> None:
+    executor = FunctionExecutor(
+        {
+            "rtc_function": lambda: {
+                "code": 0,
+                "status": "passed",
+                "message": "rtc read ok",
+                "details": {"time": "2026-03-10T10:00:00+00:00"},
+            }
+        }
+    )
+    task = ExecutionTask(
+        task_id="function.rtc_function",
+        task_type="function",
+        name="rtc_function",
+        payload={
+            "function_name": "rtc_function",
+            "params": {},
+            "expect": {
+                "pass_policy": "all",
+                "rules": [
+                    {
+                        "field": "time",
+                        "operator": "non_empty",
+                        "message": "rtc must return a timestamp",
+                    }
+                ],
+            },
+        },
+    )
+
+    result = executor.execute(task, _build_context())
+
+    assert result.status == ResultStatus.PASSED
+    assert result.code == 0
+    assert result.details["expectation_results"][0]["passed"] is True

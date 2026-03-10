@@ -18,6 +18,17 @@
         "baudrate": 115200,
         "payload": "rk3576-loopback"
       },
+      "expect": {
+        "pass_policy": "all",
+        "rules": [
+          {
+            "field": "received",
+            "operator": "eq",
+            "value": "rk3576-loopback",
+            "message": "uart must echo the RK3576 loopback payload"
+          }
+        ]
+      },
       "retry": 0,
       "timeout": 5
     }

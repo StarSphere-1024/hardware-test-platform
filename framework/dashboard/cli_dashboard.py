@@ -453,10 +453,11 @@ class CLIDashboard:
         return Panel("\n".join(lines), title="Stats")
 
     def _create_recent_failures_panel(self, state: dict[str, Any]) -> Panel:
-        lines: list[str] = []
-        for case in state["cases"]:
-            if case.get("status") in {"failed", "aborted", "timeout"}:
-                lines.append(f"{case.get('name')}: {case.get('message') or case.get('status')}")
+        lines = self._recent_failure_lines_from_snapshot(state.get("snapshot", {}))
+        if not lines:
+            for case in state["cases"]:
+                if case.get("status") in {"failed", "aborted", "timeout"}:
+                    lines.append(f"{case.get('name')}: {case.get('message') or case.get('status')}")
         if not lines:
             for event in reversed(state["events"]):
                 event_payload = event.get("event", {})
@@ -467,6 +468,70 @@ class CLIDashboard:
         if not lines:
             lines = ["No recent failures"]
         return Panel("\n".join(lines[:3]), title="Recent Failures")
+
+    def _recent_failure_lines_from_snapshot(self, snapshot: dict[str, Any]) -> list[str]:
+        lines: list[str] = []
+        for case_result in self._extract_case_results(snapshot):
+            if case_result.get("status") not in {"failed", "aborted", "timeout"}:
+                continue
+            detailed_failure = self._first_failed_leaf(case_result)
+            if detailed_failure is None:
+                case_name = str(case_result.get("name", "unknown"))
+                case_message = str(case_result.get("message") or case_result.get("status") or "failed")
+                lines.append(f"{case_name}: {case_message}")
+                continue
+
+            case_name = str(case_result.get("name", "unknown"))
+            failure_name = str(detailed_failure.get("name") or detailed_failure.get("task_id") or "task")
+            failure_message = str(detailed_failure.get("message") or detailed_failure.get("status") or "failed")
+            lines.append(f"{case_name} / {failure_name}: {failure_message}")
+        return lines
+
+    def _extract_case_results(self, snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+        results = snapshot.get("results")
+        if not isinstance(results, list):
+            return []
+
+        fixture_result = next(
+            (
+                item
+                for item in results
+                if isinstance(item, dict) and item.get("task_type") == "fixture" and isinstance(item.get("children"), list)
+            ),
+            None,
+        )
+        if fixture_result is not None:
+            return [
+                child
+                for child in fixture_result.get("children", [])
+                if isinstance(child, dict) and child.get("task_type") == "case"
+            ]
+
+        seen_task_ids: set[str] = set()
+        case_results: list[dict[str, Any]] = []
+        for item in results:
+            if not isinstance(item, dict) or item.get("task_type") != "case":
+                continue
+            task_id = str(item.get("task_id", ""))
+            if task_id and task_id in seen_task_ids:
+                continue
+            if task_id:
+                seen_task_ids.add(task_id)
+            case_results.append(item)
+        return case_results
+
+    def _first_failed_leaf(self, result: dict[str, Any]) -> dict[str, Any] | None:
+        children = result.get("children")
+        if not isinstance(children, list) or not children:
+            return result if result.get("status") in {"failed", "aborted", "timeout"} else None
+
+        for child in children:
+            if not isinstance(child, dict):
+                continue
+            failed_leaf = self._first_failed_leaf(child)
+            if failed_leaf is not None:
+                return failed_leaf
+        return None
 
     def _create_footer(self) -> Panel:
         controls = "Controls: [Q] quit  [R] refresh  [D] debug  [L] logs  [S] snapshot"

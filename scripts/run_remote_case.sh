@@ -8,6 +8,7 @@ REMOTE_DIR="${REMOTE_DIR:-}"
 
 usage() {
   echo "Usage: $0 [--host H] [--user U] [--password P] [--remote-dir D] <case-name|case-path>"
+  echo "  在远端已自动探测项目根，无需手动传 workspace-root。"
   echo "Examples:"
   echo "  $0 gpio_case"
   echo "  $0 cases/linux_host_pc/eth_case.json"
@@ -74,7 +75,7 @@ else
 fi
 
 REMOTE_PROJECT_ROOT="${REMOTE_DIR}"
-REMOTE_COMMAND="cd '${REMOTE_PROJECT_ROOT}' && '${REMOTE_DIR}/venv/bin/python' -m framework.cli.run_case --workspace-root '${REMOTE_PROJECT_ROOT}' --artifacts-root '${REMOTE_PROJECT_ROOT}' --config '${CASE_PATH}'"
+REMOTE_COMMAND="cd '${REMOTE_PROJECT_ROOT}' && '${REMOTE_DIR}/venv/bin/python' -m framework.cli.run_case --config '${CASE_PATH}'"
 
 echo "[INFO] 远程执行 case: ${CASE_PATH}"
 sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "$REMOTE_COMMAND"

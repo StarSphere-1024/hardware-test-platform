@@ -62,8 +62,6 @@ mkdir -p logs/events tmp reports
 rm -f '${REMOTE_EVENT_PATH}' '${REMOTE_SNAPSHOT_PATH}' '${REMOTE_STDOUT_PATH}'
 PYTHONUNBUFFERED=1 '${REMOTE_DIR}/venv/bin/python' -m framework.cli.run_fixture \
   --request-id '${REQUEST_ID}' \
-  --workspace-root '${REMOTE_PROJECT_ROOT}' \
-  --artifacts-root '${REMOTE_PROJECT_ROOT}' \
   --config '${FIXTURE_PATH}' \
   --dashboard > '${REMOTE_STDOUT_PATH}' 2>&1 &
 fixture_pid=\$!

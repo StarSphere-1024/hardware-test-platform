@@ -180,7 +180,7 @@ class ConfigResolver:
         resolved_interfaces: dict[str, Any],
     ) -> dict[str, Any]:
         return {
-            "product": global_config.product.to_dict(),
+            "product": board.product.to_dict(),
             "runtime": global_config.runtime.to_dict(),
             "observability": global_config.observability.to_dict(),
             "interfaces": copy.deepcopy(board.interfaces),

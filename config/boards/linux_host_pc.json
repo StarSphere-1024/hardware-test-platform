@@ -1,6 +1,10 @@
 {
   "profile_name": "linux_host_pc",
   "platform": "linux",
+  "product": {
+    "sku": "LINUX_HOST_PC",
+    "stage": "DEV"
+  },
   "supported_cases": [
     "eth_case",
     "uart_case",

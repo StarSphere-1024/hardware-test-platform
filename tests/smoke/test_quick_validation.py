@@ -97,9 +97,7 @@ def _build_precheck_failure_workspace(workspace_root: Path) -> None:
         workspace_root / "config" / "global_config.json",
         {
             "product": {
-                "sku": "RK3576_EVB",
-                "stage": "DVT",
-                "board_profile": "rk3576_missing_eth",
+                "default_board_profile": "rk3576_missing_eth"
             },
             "runtime": {
                 "default_timeout": 60,
@@ -117,6 +115,10 @@ def _build_precheck_failure_workspace(workspace_root: Path) -> None:
         {
             "profile_name": "rk3576_missing_eth",
             "platform": "linux",
+            "product": {
+                "sku": "RK3576_EVB",
+                "stage": "DVT"
+            },
             "supported_cases": ["eth_case", "uart_case"],
             "interfaces": {
                 "uart": ["/dev/ttyS0"],

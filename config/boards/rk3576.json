@@ -1,6 +1,10 @@
 {
   "profile_name": "rk3576",
   "platform": "linux",
+  "product": {
+    "sku": "RK3576_EVB",
+    "stage": "DVT"
+  },
   "supported_cases": [
     "eth_case",
     "uart_case",

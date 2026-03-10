@@ -1,7 +1,5 @@
 {
   "product": {
-    "sku": "RK3576_EVB",
-    "stage": "DVT",
     "default_board_profile": "linux_host_pc"
   },
   "runtime": {
@@ -12,7 +10,7 @@
   "observability": {
     "report_enabled": true,
     "dashboard_enabled": true,
-    "dashboard_auto_exit_on_success_seconds": 3,
-    "dashboard_auto_exit_on_failure_seconds": 5
+    "dashboard_auto_exit_on_success_seconds": null,
+    "dashboard_auto_exit_on_failure_seconds": null
   }
 }

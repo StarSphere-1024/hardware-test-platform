@@ -29,8 +29,8 @@ class SerializableModel:
 
 @dataclass(slots=True)
 class ProductConfig(SerializableModel):
-    sku: str
-    stage: str
+    sku: str | None = None
+    stage: str | None = None
     default_board_profile: str | None = None
 
 
@@ -59,8 +59,6 @@ class GlobalConfig(SerializableModel):
     def from_dict(cls, data: dict[str, Any]) -> "GlobalConfig":
         product_data = dict(data["product"])
         product = ProductConfig(
-            sku=product_data["sku"],
-            stage=product_data["stage"],
             default_board_profile=product_data.get("default_board_profile", product_data.get("board_profile")),
         )
         return cls(
@@ -74,6 +72,7 @@ class GlobalConfig(SerializableModel):
 class BoardProfile(SerializableModel):
     profile_name: str
     platform: str
+    product: ProductConfig
     supported_cases: list[str] = field(default_factory=list)
     interfaces: dict[str, list[str]] = field(default_factory=dict)
     capabilities: dict[str, Any] = field(default_factory=dict)
@@ -82,9 +81,14 @@ class BoardProfile(SerializableModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BoardProfile":
+        product_data = dict(data["product"])
         return cls(
             profile_name=data["profile_name"],
             platform=data["platform"],
+            product=ProductConfig(
+                sku=product_data["sku"],
+                stage=product_data["stage"],
+            ),
             supported_cases=list(data.get("supported_cases", [])),
             interfaces={key: list(value) for key, value in data.get("interfaces", {}).items()},
             capabilities=dict(data.get("capabilities", {})),

@@ -26,7 +26,7 @@ class ReportGenerator:
         events: list[EventRecord],
     ) -> list[ReportArtifact]:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        sku = resolved_config.global_config.product.sku or "UNKNOWN"
+        sku = resolved_config.board_profile.product.sku or "UNKNOWN"
         suffix = str(root_result.status)
         base_name = f"{sku}_{snapshot.request_id}_{timestamp}_{suffix}".replace("/", "_")
         text_path = self.reports_dir / f"{base_name}.report"

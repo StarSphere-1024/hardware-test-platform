@@ -118,13 +118,14 @@ python -m framework.cli.run_function \
   --params '{"target_ip": "192.168.100.1", "interface": "end0"}'
 ```
 
-### 切换 board profile
+### 指定 board profile 运行单个 function
 
 ```bash
-python -m framework.cli.run_case \
+python -m framework.cli.run_function \
   --workspace-root . \
   --board-profile rk3576 \
-  --config cases/gpio_case.json
+  --callable functions.gpio.test_gpio_mapping:test_gpio_mapping \
+  --params '{"pin_mapping": {"UART2_TX_M0": 8}, "required_signals": ["UART2_TX_M0"]}'
 ```
 
 ### 启动带 Dashboard 的执行
@@ -159,7 +160,7 @@ python -m pytest
 
 全局配置位于 config/global_config.json，当前包含：
 
-- product：sku、stage、默认 board_profile
+- product：默认 board_profile
 - runtime：default_timeout、default_retry、default_retry_interval
 - observability：report_enabled、dashboard_enabled 等默认项
 
@@ -172,6 +173,7 @@ python -m pytest
 
 Board profile 负责声明：
 
+- product.sku / product.stage
 - supported_cases
 - interfaces 候选列表
 - capabilities 声明
@@ -210,13 +212,14 @@ Fixture JSON 负责把多个 case 组织为一个场景，并声明：
 
 CLI 可以覆盖部分运行参数，例如：
 
-- --board-profile
 - --timeout
 - --retry
 - --retry-interval
 - --execution
 - --stop-on-failure
 - --report-enabled / --no-report
+
+其中 `--board-profile` 仅 `run_function` 支持；`run_case` 与 `run_fixture` 使用配置文件中绑定的 board profile。
 
 这些覆盖项会进入解析后的 ResolvedExecutionConfig，而不是由 Function 直接读取配置文件。
 
@@ -241,6 +244,8 @@ CLI 可以覆盖部分运行参数，例如：
 - logs/{request_id}.log：统一执行日志
 - reports/{sku}_{request_id}_{timestamp}_{status}.report：文本报告
 - reports/{sku}_{request_id}_{timestamp}_{status}.report.json：结构化报告
+
+其中 sku 取自当前解析后的 board profile，而不是全局配置，这样同一套执行框架切换开发板时不会再复用错误的产品标识。
 
 Dashboard 直接消费 tmp、logs/events、logs、reports 下的当前产物，不依赖旧平台的 result.json 约定。
 
@@ -311,7 +316,7 @@ def test_demo(
 
 1. 在 config/boards/ 下新增 profile。
 2. 明确 interfaces、supported_cases、capabilities、tools_required。
-3. 通过 global_config 或 CLI 的 --board-profile 选择它。
+3. 对 case/fixture，优先在配置中显式绑定 board profile；对 adhoc function 可通过 CLI 的 --board-profile 选择。
 
 ## 开发与验证建议
 

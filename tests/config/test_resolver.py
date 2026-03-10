@@ -23,6 +23,8 @@ def test_fixture_resolution_builds_resolved_execution_config() -> None:
     assert resolved.global_config.product.default_board_profile == "linux_host_pc"
     assert resolved.board_profile.platform == "linux"
     assert resolved.board_profile.profile_name == "linux_host_pc"
+    assert resolved.board_profile.product.sku == "LINUX_HOST_PC"
+    assert resolved.board_profile.product.stage == "DEV"
     assert resolved.resolved_interfaces["eth"]["primary"] == "eno1"
     assert resolved.resolved_interfaces["i2c"]["primary"] == "/dev/i2c-0"
     assert len(resolved.cases) == 4
@@ -43,6 +45,8 @@ def test_fixture_board_profile_overrides_global_default() -> None:
     assert resolved.fixture is not None
     assert resolved.fixture.board_profile == "rk3576"
     assert resolved.board_profile.profile_name == "rk3576"
+    assert resolved.board_profile.product.sku == "RK3576_EVB"
+    assert resolved.board_profile.product.stage == "DVT"
 
 
 def test_case_board_profile_overrides_global_default() -> None:

@@ -76,8 +76,6 @@ def _validate_execution(mapping: Mapping[str, Any], key: str, *, field_path: str
 def validate_global_config_data(data: Any, *, source: str | None = None) -> None:
     root = _ensure_mapping(data, field_path="global_config", source=source)
     product = _ensure_mapping(_require_field(root, "product", field_path="product", source=source), field_path="product", source=source)
-    _require_string(product, "sku", field_path="product.sku", source=source)
-    _require_string(product, "stage", field_path="product.stage", source=source)
     _optional_string(product, "default_board_profile", field_path="product.default_board_profile", source=source)
     _optional_string(product, "board_profile", field_path="product.board_profile", source=source)
 
@@ -111,6 +109,9 @@ def validate_board_profile_data(data: Any, *, source: str | None = None) -> None
     root = _ensure_mapping(data, field_path="board_profile", source=source)
     _require_string(root, "profile_name", field_path="profile_name", source=source)
     _require_string(root, "platform", field_path="platform", source=source)
+    product = _ensure_mapping(_require_field(root, "product", field_path="product", source=source), field_path="product", source=source)
+    _require_string(product, "sku", field_path="product.sku", source=source)
+    _require_string(product, "stage", field_path="product.stage", source=source)
     _optional_list_of_strings(root, "supported_cases", field_path="supported_cases", source=source)
     _optional_list_of_strings(root, "tools_required", field_path="tools_required", source=source)
 

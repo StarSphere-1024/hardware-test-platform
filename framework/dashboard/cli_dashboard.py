@@ -363,13 +363,15 @@ class CLIDashboard:
         counts = {
             "passed": sum(1 for case in cases if case.get("status") == "passed"),
             "failed": sum(1 for case in cases if case.get("status") == "failed"),
+            "timeout": sum(1 for case in cases if case.get("status") == "timeout"),
             "aborted": sum(1 for case in cases if case.get("status") == "aborted"),
             "running": sum(1 for case in cases if case.get("status") == "running"),
             "skipped": sum(1 for case in cases if case.get("status") == "skipped"),
         }
         total = len(cases)
         retry_count = sum(1 for item in events if item.get("event", {}).get("event_type") == "task_retried")
-        wait_count = max(total - counts["passed"] - counts["failed"] - counts["aborted"] - counts["running"] - counts["skipped"], 0)
+        completed_count = counts["passed"] + counts["failed"] + counts["timeout"] + counts["aborted"] + counts["skipped"]
+        wait_count = max(total - completed_count - counts["running"], 0)
         pass_rate = counts["passed"] / total * 100.0 if total else 0.0
         return {
             "snapshot": snapshot,
@@ -378,10 +380,12 @@ class CLIDashboard:
             "sys_info": sys_info,
             "pass_count": counts["passed"],
             "fail_count": counts["failed"],
+            "timeout_count": counts["timeout"],
             "aborted_count": counts["aborted"],
             "running_count": counts["running"],
             "retry_count": retry_count,
             "wait_count": wait_count,
+            "completed_count": completed_count,
             "total": total,
             "pass_rate": pass_rate,
             "current_status": snapshot.get("current_status", "pending"),
@@ -396,7 +400,7 @@ class CLIDashboard:
         info = (
             f"status: {state['current_status']}  │  "
             f"elapsed: {self._elapsed_str()}  │  "
-            f"cases: {state['pass_count'] + state['fail_count'] + state['aborted_count']}/{max(1, state['total'])}"
+            f"cases: {state['completed_count']}/{max(1, state['total'])}"
         )
         return Panel(info)
 
@@ -445,6 +449,7 @@ class CLIDashboard:
             f"pass rate: [green]{state['pass_rate']:.1f}%[/green]",
             f"passed: [green]{state['pass_count']}[/green]",
             f"failed: [red]{state['fail_count']}[/red]",
+            f"timeout: [yellow]{state['timeout_count']}[/yellow]",
             f"aborted: [yellow]{state['aborted_count']}[/yellow]",
             f"running: [blue]{state['running_count']}[/blue]",
             f"retries: [yellow]{state['retry_count']}[/yellow]",

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REMOTE_HOST="${REMOTE_HOST:-192.168.100.91}"
-REMOTE_USER="${REMOTE_USER:-seeed}"
-REMOTE_PASS="${REMOTE_PASS:-seeed}"
-REMOTE_DIR="${REMOTE_DIR:-/home/seeed/hardware_test}"
+REMOTE_HOST="${REMOTE_HOST:-}"
+REMOTE_USER="${REMOTE_USER:-}"
+REMOTE_PASS="${REMOTE_PASS:-}"
+REMOTE_DIR="${REMOTE_DIR:-}"
 REQUEST_ID="req-remote-$(date +%s)-$RANDOM"
 
 usage() {
@@ -37,28 +37,33 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$REMOTE_HOST" || -z "$REMOTE_USER" || -z "$REMOTE_PASS" || -z "$REMOTE_DIR" ]]; then
+  echo "[ERROR] 请先设置 REMOTE_HOST / REMOTE_USER / REMOTE_PASS / REMOTE_DIR，或通过参数显式传入"
+  exit 2
+fi
+
 if [[ "$FIXTURE_INPUT" == *.json || "$FIXTURE_INPUT" == fixtures/* ]]; then
   FIXTURE_PATH="$FIXTURE_INPUT"
 else
   FIXTURE_PATH="fixtures/${FIXTURE_INPUT}.json"
 fi
 
-REMOTE_WORKSPACE="${REMOTE_DIR}/workspace"
-REMOTE_EVENT_PATH="${REMOTE_WORKSPACE}/logs/events/${REQUEST_ID}.jsonl"
-REMOTE_SNAPSHOT_PATH="${REMOTE_WORKSPACE}/tmp/${REQUEST_ID}_snapshot.json"
-REMOTE_STDOUT_PATH="${REMOTE_WORKSPACE}/tmp/${REQUEST_ID}_stdout.log"
+REMOTE_PROJECT_ROOT="${REMOTE_DIR}"
+REMOTE_EVENT_PATH="${REMOTE_PROJECT_ROOT}/logs/events/${REQUEST_ID}.jsonl"
+REMOTE_SNAPSHOT_PATH="${REMOTE_PROJECT_ROOT}/tmp/${REQUEST_ID}_snapshot.json"
+REMOTE_STDOUT_PATH="${REMOTE_PROJECT_ROOT}/tmp/${REQUEST_ID}_stdout.log"
 
 echo "[INFO] 远程执行 fixture: ${FIXTURE_PATH}"
 echo "[INFO] request_id: ${REQUEST_ID}"
 sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" <<EOF
 set -u
-cd '${REMOTE_WORKSPACE}'
+cd '${REMOTE_PROJECT_ROOT}'
 mkdir -p logs/events tmp reports
 rm -f '${REMOTE_EVENT_PATH}' '${REMOTE_SNAPSHOT_PATH}' '${REMOTE_STDOUT_PATH}'
 PYTHONUNBUFFERED=1 '${REMOTE_DIR}/venv/bin/python' -m framework.cli.run_fixture \
   --request-id '${REQUEST_ID}' \
-  --workspace-root '${REMOTE_WORKSPACE}' \
-  --artifacts-root '${REMOTE_WORKSPACE}' \
+  --workspace-root '${REMOTE_PROJECT_ROOT}' \
+  --artifacts-root '${REMOTE_PROJECT_ROOT}' \
   --config '${FIXTURE_PATH}' \
   --dashboard > '${REMOTE_STDOUT_PATH}' 2>&1 &
 fixture_pid=\$!
@@ -166,4 +171,4 @@ exit "\$fixture_exit"
 EOF
 
 echo "[INFO] 最近报告文件:"
-sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "cd '${REMOTE_WORKSPACE}' && ls -1t reports/* 2>/dev/null | head -n 20 || true"
+sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "cd '${REMOTE_PROJECT_ROOT}' && ls -1t reports/* 2>/dev/null | head -n 20 || true"

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REMOTE_HOST="${REMOTE_HOST:-192.168.100.91}"
-REMOTE_USER="${REMOTE_USER:-seeed}"
-REMOTE_PASS="${REMOTE_PASS:-seeed}"
-REMOTE_DIR="${REMOTE_DIR:-/home/seeed/hardware_test}"
+REMOTE_HOST="${REMOTE_HOST:-}"
+REMOTE_USER="${REMOTE_USER:-}"
+REMOTE_PASS="${REMOTE_PASS:-}"
+REMOTE_DIR="${REMOTE_DIR:-}"
 
 usage() {
   echo "Usage: $0 [--host H] [--user U] [--password P] [--remote-dir D] <case-name|case-path>"
@@ -44,6 +44,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "$REMOTE_HOST" || -z "$REMOTE_USER" || -z "$REMOTE_PASS" || -z "$REMOTE_DIR" ]]; then
+  echo "[ERROR] 请先设置 REMOTE_HOST / REMOTE_USER / REMOTE_PASS / REMOTE_DIR，或通过参数显式传入"
+  exit 2
+fi
+
 if [[ -z "$CASE_INPUT" ]]; then
   usage
   exit 1
@@ -68,11 +73,11 @@ else
   fi
 fi
 
-REMOTE_WORKSPACE="${REMOTE_DIR}/workspace"
-REMOTE_COMMAND="cd '${REMOTE_WORKSPACE}' && '${REMOTE_DIR}/venv/bin/python' -m framework.cli.run_case --workspace-root '${REMOTE_WORKSPACE}' --artifacts-root '${REMOTE_WORKSPACE}' --config '${CASE_PATH}'"
+REMOTE_PROJECT_ROOT="${REMOTE_DIR}"
+REMOTE_COMMAND="cd '${REMOTE_PROJECT_ROOT}' && '${REMOTE_DIR}/venv/bin/python' -m framework.cli.run_case --workspace-root '${REMOTE_PROJECT_ROOT}' --artifacts-root '${REMOTE_PROJECT_ROOT}' --config '${CASE_PATH}'"
 
 echo "[INFO] 远程执行 case: ${CASE_PATH}"
 sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "$REMOTE_COMMAND"
 
 echo "[INFO] 最近报告文件:"
-sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "cd '${REMOTE_WORKSPACE}' && ls -1t reports/* 2>/dev/null | head -n 10 || true"
+sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "cd '${REMOTE_PROJECT_ROOT}' && ls -1t reports/* 2>/dev/null | head -n 10 || true"

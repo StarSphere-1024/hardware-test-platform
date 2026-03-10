@@ -79,7 +79,10 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
 
     assert state["current_status"] == "aborted"
     assert state["fail_count"] == 1
+    assert state["timeout_count"] == 0
     assert state["aborted_count"] == 1
+    assert state["completed_count"] == 2
+    assert state["wait_count"] == 0
     assert state["retry_count"] == 1
     assert state["sys_info"]["cpu"]["usage_percent"] == 23.0
     assert layout is not None
@@ -194,3 +197,45 @@ def test_dashboard_recent_failures_prefers_failed_function_messages(tmp_path: Pa
     assert "eth_case / test_eth_ping: ethernet peer must be reachable" in rendered
     assert "uart_case / test_uart_loopback: function 'test_uart_loopback' timed out after 5s" in rendered
     assert "case completed: failed=1" not in rendered
+
+
+def test_dashboard_counts_timeout_cases_as_completed(tmp_path: Path) -> None:
+    request_id = "req-dash-timeout-count"
+    artifacts_root = tmp_path / "artifacts"
+    _write_json(
+        artifacts_root / "tmp" / f"{request_id}_snapshot.json",
+        {
+            "request_id": request_id,
+            "plan_id": "plan.rk3576_smoke",
+            "updated_at": datetime(2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc).isoformat(),
+            "current_status": "timeout",
+            "fixture": {"name": "rk3576_smoke", "status": "timeout"},
+            "cases": [
+                {"name": "eth_case", "status": "failed", "message": "failed", "summary": {"failed": 1}},
+                {"name": "uart_case", "status": "timeout", "message": "timeout", "summary": {"timeout": 1}},
+                {"name": "rtc_case", "status": "passed", "message": "passed", "summary": {"passed": 1}},
+                {"name": "i2c_case", "status": "passed", "message": "passed", "summary": {"passed": 1}},
+                {"name": "gpio_case", "status": "passed", "message": "passed", "summary": {"passed": 1}},
+            ],
+            "counters": {"failed": 1, "timeout": 1, "passed": 3},
+            "status_summary": {"failed": 1, "timeout": 1, "passed": 3},
+            "runtime_state": {},
+            "results": [],
+        },
+    )
+
+    dashboard = CLIDashboard(
+        workspace_root=REPO_ROOT,
+        tmp_dir=artifacts_root / "tmp",
+        logs_dir=artifacts_root / "logs",
+        reports_dir=artifacts_root / "reports",
+        request_id=request_id,
+        fixture_name="rk3576_smoke",
+    )
+
+    state = dashboard._collect_state()
+
+    assert state["total"] == 5
+    assert state["completed_count"] == 5
+    assert state["timeout_count"] == 1
+    assert state["wait_count"] == 0

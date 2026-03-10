@@ -110,6 +110,73 @@ def test_run_fixture_cli_can_attach_dashboard(tmp_path: Path, monkeypatch, capsy
     assert attached["failure_exit_linger_seconds"] is None
 
 
+def test_run_fixture_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(REPO_ROOT / "framework")
+
+    exit_code = run_fixture_main(
+        [
+            "--artifacts-root",
+            str(tmp_path),
+            "--config",
+            "fixtures/linux_host_pc.json",
+        ],
+        function_registry=_mock_function_registry(),
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+    assert Path(payload["snapshot_path"]).exists()
+
+
+def test_run_fixture_cli_accepts_config_relative_to_current_subdir_when_root_omitted(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.chdir(REPO_ROOT / "fixtures")
+
+    exit_code = run_fixture_main(
+        [
+            "--artifacts-root",
+            str(tmp_path),
+            "--config",
+            "linux_host_pc.json",
+        ],
+        function_registry=_mock_function_registry(),
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+
+
+def test_run_function_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path, monkeypatch, capsys) -> None:
+    module_path = tmp_path / "sample_funcs.py"
+    module_path.write_text(
+        "def ping_once(target_ip, count=1):\n"
+        "    return {'code': 0, 'message': f'ping {target_ip} x{count}', 'details': {'target_ip': target_ip, 'count': count}}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    monkeypatch.chdir(REPO_ROOT / "framework")
+
+    exit_code = run_function_main(
+        [
+            "--artifacts-root",
+            str(tmp_path / "artifacts"),
+            "--callable",
+            "sample_funcs:ping_once",
+            "--params",
+            '{"target_ip": "127.0.0.1", "count": 2}',
+        ]
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+    assert payload["result"]["details"]["count"] == 2
+
+
 def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Path, monkeypatch, capsys) -> None:
     from datetime import datetime, timezone
 

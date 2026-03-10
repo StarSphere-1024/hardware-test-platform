@@ -12,6 +12,7 @@ from .common import (
     create_base_parser,
     execute_plan,
     load_callable,
+    normalize_cli_args,
     parse_json_params,
     payload_exit_code,
     print_payload,
@@ -23,6 +24,7 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
     parser.add_argument("--callable", required=True, help="python callable path in module:function format")
     parser.add_argument("--params", default="{}", help="JSON object params for callable")
     args = parser.parse_args(argv)
+    args = normalize_cli_args(args)
     try:
         params = parse_json_params(args.params)
         function_name, callable_obj = load_callable(args.callable)

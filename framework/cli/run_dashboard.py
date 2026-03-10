@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from framework.dashboard import run_dashboard
 
+from .common import normalize_cli_args
+
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
@@ -16,6 +18,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--refresh", type=float, default=1.0, help="refresh interval in seconds")
     parser.add_argument("--no-monitor", action="store_true", help="disable background system monitoring")
     args = parser.parse_args(argv)
+    args = normalize_cli_args(args)
 
     run_dashboard(
         workspace_root=args.workspace_root,

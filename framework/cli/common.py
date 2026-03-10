@@ -31,10 +31,99 @@ class CLIError(Exception):
         self.payload = dict(payload or {"error": message})
 
 
+def _looks_like_workspace_root(candidate: Path) -> bool:
+    return (
+        (candidate / "framework").is_dir()
+        and (candidate / "config").is_dir()
+        and ((candidate / "cases").is_dir() or (candidate / "fixtures").is_dir())
+    )
+
+
+def _iter_workspace_root_candidates(args: argparse.Namespace) -> list[Path]:
+    origins: list[Path] = [Path.cwd().resolve()]
+    for attr_name in ("config", "global_config"):
+        value = getattr(args, attr_name, None)
+        if not value:
+            continue
+        candidate = Path(value)
+        if candidate.is_absolute():
+            origins.append((candidate if candidate.is_dir() else candidate.parent).resolve())
+
+    seen: set[Path] = set()
+    ordered: list[Path] = []
+    for origin in origins:
+        for candidate in (origin, *origin.parents):
+            resolved = candidate.resolve()
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            ordered.append(resolved)
+    return ordered
+
+
+def _root_matches_cli_paths(candidate: Path, args: argparse.Namespace) -> bool:
+    for attr_name in ("config", "global_config"):
+        value = getattr(args, attr_name, None)
+        if not value:
+            continue
+        path = Path(value)
+        if path.is_absolute():
+            if not path.exists():
+                return False
+            continue
+        cwd_candidate = (Path.cwd() / path).resolve()
+        workspace_candidate = (candidate / path).resolve()
+        if cwd_candidate.exists() or workspace_candidate.exists():
+            continue
+        return False
+    return True
+
+
+def resolve_workspace_root(args: argparse.Namespace) -> Path:
+    explicit_root = getattr(args, "workspace_root", None)
+    if explicit_root not in (None, ""):
+        return Path(explicit_root).resolve()
+
+    matched_workspaces: list[Path] = []
+    for candidate in _iter_workspace_root_candidates(args):
+        if not _looks_like_workspace_root(candidate):
+            continue
+        matched_workspaces.append(candidate)
+        if _root_matches_cli_paths(candidate, args):
+            return candidate
+
+    if matched_workspaces:
+        return matched_workspaces[0]
+    return Path.cwd().resolve()
+
+
+def _normalize_path_arg(value: str | None, *, workspace_root: Path) -> str | None:
+    if not value:
+        return value
+    candidate = Path(value)
+    if candidate.is_absolute():
+        return str(candidate.resolve())
+
+    cwd_candidate = (Path.cwd() / candidate).resolve()
+    workspace_candidate = (workspace_root / candidate).resolve()
+    if cwd_candidate.exists() and not workspace_candidate.exists():
+        return str(cwd_candidate)
+    return value
+
+
+def normalize_cli_args(args: argparse.Namespace) -> argparse.Namespace:
+    workspace_root = resolve_workspace_root(args)
+    args.workspace_root = str(workspace_root)
+    if hasattr(args, "config"):
+        args.config = _normalize_path_arg(getattr(args, "config", None), workspace_root=workspace_root)
+    args.global_config = _normalize_path_arg(getattr(args, "global_config", None), workspace_root=workspace_root)
+    return args
+
+
 def create_base_parser(description: str, *, include_board_profile: bool = False) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument("--request-id", default=None, help="explicit request id used for logs/tmp/reports correlation")
-    parser.add_argument("--workspace-root", default=".", help="workspace root used for config resolution")
+    parser.add_argument("--workspace-root", default=None, help="workspace root used for config resolution; auto-detected when omitted")
     parser.add_argument("--artifacts-root", default=None, help="output root for logs/tmp/reports")
     parser.add_argument("--global-config", default=None, help="override global config path")
     if include_board_profile:

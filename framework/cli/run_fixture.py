@@ -12,6 +12,7 @@ from .common import (
     build_fixture_resolved_config,
     create_base_parser,
     execute_plan,
+    normalize_cli_args,
     payload_exit_code,
     print_payload,
 )
@@ -21,6 +22,7 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
     parser = create_base_parser("Execute a fixture configuration")
     parser.add_argument("--config", required=True, help="fixture config path")
     args = parser.parse_args(argv)
+    args = normalize_cli_args(args)
     try:
         request = build_execution_request(args, target_type="fixture", target_name=args.config)
         resolved_config = build_fixture_resolved_config(args, request)

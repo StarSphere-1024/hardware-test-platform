@@ -15,6 +15,7 @@ from .common import (
     build_execution_request,
     create_base_parser,
     execute_plan,
+    normalize_cli_args,
     payload_exit_code,
     print_payload,
 )
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
     parser = create_base_parser("Execute a case configuration")
     parser.add_argument("--config", required=True, help="case config path")
     args = parser.parse_args(argv)
+    args = normalize_cli_args(args)
     try:
         request = build_execution_request(args, target_type="case", target_name=args.config)
         resolved_config = build_case_resolved_config(args, request)

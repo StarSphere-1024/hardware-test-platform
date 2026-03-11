@@ -11,8 +11,13 @@ class _FakeSerialCapability:
         self.calls.append((port, payload, baudrate, timeout))
         return {
             "success": True,
+            "port": port,
+            "payload": payload,
             "message": "loopback ok",
             "received": payload,
+            "matched": True,
+            "baudrate": baudrate,
+            "error_type": None,
             "duration_ms": 3,
         }
 
@@ -30,6 +35,8 @@ def test_uart_loopback_uses_serial_capability() -> None:
 
     assert result["code"] == 0
     assert result["status"] == "passed"
+    assert result["details"]["port"] == "/dev/ttyS0"
     assert result["details"]["received"] == "phase-a"
+    assert result["details"]["matched"] is True
     assert result["metrics"]["payload_size"] == len("phase-a".encode("utf-8"))
     assert capability.calls == [("/dev/ttyS0", "phase-a", 115200, 4)]

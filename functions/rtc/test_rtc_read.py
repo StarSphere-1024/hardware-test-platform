@@ -23,14 +23,17 @@ def test_rtc_read(
 
     result = rtc.read_time(rtc_device)
     success = bool(result.get("success", False))
-    dt_value = result.get("datetime")
+    time_iso = result.get("time_iso")
+    if time_iso is None:
+        dt_value = result.get("datetime")
+        time_iso = dt_value.isoformat() if hasattr(dt_value, "isoformat") else None
     return {
         "code": 0 if success else -1,
         "status": "passed" if success else "failed",
         "message": result.get("message") or (f"rtc read ok on {result.get('device')}" if success else "rtc read failed"),
         "details": {
             "rtc_device": result.get("device", rtc_device),
-            "time": dt_value.isoformat() if hasattr(dt_value, "isoformat") else None,
+            "time": time_iso,
             "source": result.get("source"),
             "raw": result.get("raw"),
             "error_type": result.get("error_type"),

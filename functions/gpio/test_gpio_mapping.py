@@ -22,11 +22,11 @@ def test_gpio_mapping(
         }
 
     description = gpio.describe_pin(physical_pin)
-    success = bool(description.get("available", False))
+    success = bool(description.get("success", description.get("available", False)))
     return {
         "code": 0 if success else -1,
         "status": "passed" if success else "failed",
-        "message": (
+        "message": description.get("message") or (
             f"gpio mapping ok for physical pin {physical_pin}"
             if success
             else f"gpio mapping unavailable for physical pin {physical_pin}"

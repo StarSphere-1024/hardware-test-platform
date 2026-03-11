@@ -15,10 +15,10 @@ class I2CCapability:
         self.board_profile = dict(board_profile or {})
 
     def list_buses(self) -> list[str]:
-        return sorted(self.adapter.list_paths("/dev/i2c-*"))
+        return sorted(self.adapter._list_paths("/dev/i2c-*"))
 
     def bus_exists(self, bus: str) -> bool:
-        return self.adapter.path_exists(bus)
+        return self.adapter._path_exists(bus)
 
     def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
         preferred = candidates or self.board_profile.get("interfaces", {}).get("i2c", [])
@@ -38,8 +38,16 @@ class I2CCapability:
                     "exists": self.bus_exists(bus),
                 }
             )
+        success = bool(selected_buses) and all(item["exists"] for item in summary)
         return {
-            "success": bool(selected_buses),
+            "success": success,
+            "requested_buses": list(selected_buses),
             "bus_count": len(selected_buses),
             "buses": summary,
+            "error_type": None if success else ("device_not_found" if selected_buses else "no_bus_selected"),
+            "message": (
+                f"i2c scan ok, buses={len(selected_buses)}"
+                if success
+                else ("i2c scan failed" if selected_buses else "i2c bus not found")
+            ),
         }

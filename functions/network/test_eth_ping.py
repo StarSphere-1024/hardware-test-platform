@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 __test__ = False
@@ -28,8 +27,8 @@ def test_eth_ping(
     selected_interface = interface or network.resolve_primary()
     ping_result = network.ping(target_ip, interface=selected_interface, count=count, timeout=timeout)
     stdout = ping_result.get("stdout", "")
-    packet_loss = _parse_packet_loss(stdout)
-    avg_latency_ms = _parse_average_latency(stdout)
+    packet_loss = float(ping_result.get("packet_loss", 0.0))
+    avg_latency_ms = float(ping_result.get("avg_latency_ms", 0.0))
     success = bool(ping_result.get("success", False))
 
     return {
@@ -43,27 +42,14 @@ def test_eth_ping(
         "details": {
             "success": success,
             "target_ip": target_ip,
-            "interface": selected_interface,
+            "interface": ping_result.get("interface", selected_interface),
             "packet_loss": packet_loss,
             "stdout": stdout,
             "stderr": ping_result.get("stderr", ""),
+            "error_type": ping_result.get("error_type"),
         },
         "metrics": {
             "packet_loss": packet_loss,
             "avg_latency_ms": avg_latency_ms,
         },
     }
-
-
-def _parse_packet_loss(output: str) -> float:
-    match = re.search(r"([\d.]+)%\s+packet loss", output)
-    if match:
-        return float(match.group(1))
-    return 100.0 if output else 0.0
-
-
-def _parse_average_latency(output: str) -> float:
-    match = re.search(r"(?:rtt|round-trip) min/avg/max(?:/mdev)? = [\d.]+/([\d.]+)/", output)
-    if match:
-        return float(match.group(1))
-    return 0.0

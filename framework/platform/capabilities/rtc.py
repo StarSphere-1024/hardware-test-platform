@@ -16,16 +16,16 @@ class RTCCapability:
         self.board_profile = dict(board_profile or {})
 
     def list_devices(self) -> list[str]:
-        devices = self.adapter.list_paths("/dev/rtc*")
+        devices = self.adapter._list_paths("/dev/rtc*")
         return sorted([path for path in devices if path != "/dev/rtc"] + (["/dev/rtc"] if "/dev/rtc" in devices else []))
 
     def device_exists(self, device: str) -> bool:
-        return self.adapter.path_exists(device)
+        return self.adapter._path_exists(device)
 
     def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
         preferred = candidates or self.board_profile.get("interfaces", {}).get("rtc", [])
         for candidate in preferred:
-            if self.adapter.path_exists(candidate):
+            if self.adapter._path_exists(candidate):
                 return candidate
         return None
 
@@ -34,6 +34,9 @@ class RTCCapability:
         if not rtc_device:
             return {
                 "success": False,
+                "device": device,
+                "datetime": None,
+                "time_iso": None,
                 "error_type": "device_not_found",
                 "message": "rtc device not found",
             }
@@ -46,8 +49,10 @@ class RTCCapability:
                     "success": True,
                     "device": rtc_device,
                     "datetime": parsed,
+                    "time_iso": parsed.isoformat(),
                     "source": "hwclock",
                     "raw": result.stdout.strip(),
+                    "message": f"rtc read ok on {rtc_device}",
                 }
 
         sysfs_name = rtc_device.split("/")[-1]
@@ -55,20 +60,24 @@ class RTCCapability:
             f"/sys/class/rtc/{sysfs_name}/since_epoch",
             "/sys/class/rtc/rtc0/since_epoch",
         ):
-            if self.adapter.path_exists(candidate):
-                raw = self.adapter.read_text(candidate).strip().split(".")[0]
+            if self.adapter._path_exists(candidate):
+                raw = self.adapter._read_text(candidate).strip().split(".")[0]
                 epoch = int(raw)
                 return {
                     "success": True,
                     "device": rtc_device,
                     "datetime": datetime.fromtimestamp(epoch, tz=timezone.utc),
+                    "time_iso": datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat(),
                     "source": "sysfs",
                     "raw": raw,
+                    "message": f"rtc read ok on {rtc_device}",
                 }
 
         return {
             "success": False,
             "device": rtc_device,
+            "datetime": None,
+            "time_iso": None,
             "error_type": "read_failed",
             "message": result.stderr.strip() or "unable to read rtc time",
         }

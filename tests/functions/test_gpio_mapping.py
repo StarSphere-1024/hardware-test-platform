@@ -15,6 +15,9 @@ class _FakeGPIOCapability:
             "chip_count": 1,
             "chips": ["/dev/gpiochip0"],
             "available": True,
+            "success": True,
+            "error_type": None,
+            "message": f"gpio mapping ok for physical pin {physical_pin}",
         }
 
 
@@ -27,4 +30,5 @@ def test_gpio_mapping_uses_gpio_capability() -> None:
     assert result["status"] == "passed"
     assert result["details"]["logical_pin"] == 51
     assert result["details"]["chip_count"] == 1
+    assert result["message"] == "gpio mapping ok for physical pin 7"
     assert capability.calls == [7]

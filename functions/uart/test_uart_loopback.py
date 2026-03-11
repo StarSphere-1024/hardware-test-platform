@@ -31,13 +31,14 @@ def test_uart_loopback(
         "status": "passed" if success else "failed",
         "message": result.get("message") or ("uart loopback ok" if success else "uart loopback failed"),
         "details": {
-            "port": port,
-            "payload": payload,
+            "port": result.get("port", port),
+            "payload": result.get("payload", payload),
             "received": result.get("received"),
+            "matched": result.get("matched", success),
             "error_type": result.get("error_type"),
         },
         "metrics": {
             "duration_ms": result.get("duration_ms", 0),
-            "payload_size": len(payload.encode("utf-8")),
+            "payload_size": len(str(result.get("payload", payload)).encode("utf-8")),
         },
     }

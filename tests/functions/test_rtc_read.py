@@ -15,8 +15,10 @@ class _FakeRTCCapability:
             "success": True,
             "device": device or "/dev/rtc0",
             "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+            "time_iso": "2026-03-06T12:00:00+00:00",
             "source": "hwclock",
             "raw": "2026-03-06 12:00:00",
+            "message": f"rtc read ok on {device or '/dev/rtc0'}",
         }
 
 

@@ -189,17 +189,27 @@ def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Pa
     def fake_ping(self, target_ip, *, interface=None, count=1, timeout=5):
         return {
             "success": True,
+            "target": target_ip,
+            "interface": interface,
             "return_code": 0,
             "stdout": "1 packets transmitted, 1 received, 0% packet loss\nrtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n",
             "stderr": "",
+            "packet_loss": 0.0,
+            "avg_latency_ms": 0.321,
+            "message": f"icmp probe to {target_ip} via {interface or 'auto'} ok",
             "duration_ms": 5,
         }
 
     def fake_loopback(self, port, *, payload, baudrate=115200, timeout=5):
         return {
             "success": True,
+            "port": port,
+            "payload": payload,
             "message": "loopback ok",
             "received": payload,
+            "matched": True,
+            "baudrate": baudrate,
+            "error_type": None,
             "duration_ms": 4,
         }
 
@@ -208,8 +218,10 @@ def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Pa
             "success": True,
             "device": device or "/dev/rtc0",
             "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+            "time_iso": "2026-03-06T12:00:00+00:00",
             "source": "hwclock",
             "raw": "2026-03-06 12:00:00",
+            "message": f"rtc read ok on {device or '/dev/rtc0'}",
         }
 
     def fake_describe_pin(self, physical_pin):
@@ -219,14 +231,20 @@ def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Pa
             "chip_count": 1,
             "chips": ["/dev/gpiochip0"],
             "available": True,
+            "success": True,
+            "error_type": None,
+            "message": f"gpio mapping ok for physical pin {physical_pin}",
         }
 
     def fake_scan_buses(self, buses=None):
         bus_list = buses or ["/dev/i2c-0", "/dev/i2c-2"]
         return {
             "success": True,
+            "requested_buses": list(bus_list),
             "bus_count": len(bus_list),
             "buses": [{"bus": item, "exists": True} for item in bus_list],
+            "error_type": None,
+            "message": f"i2c scan ok, buses={len(bus_list)}",
         }
 
     monkeypatch.setattr(NetworkCapability, "ping", fake_ping)
@@ -294,9 +312,14 @@ def test_run_case_cli_auto_discovers_real_eth_function(tmp_path: Path, monkeypat
     def fake_ping(self, target_ip, *, interface=None, count=1, timeout=5):
         return {
             "success": True,
+            "target": target_ip,
+            "interface": interface,
             "return_code": 0,
             "stdout": "1 packets transmitted, 1 received, 0% packet loss\nrtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n",
             "stderr": "",
+            "packet_loss": 0.0,
+            "avg_latency_ms": 0.321,
+            "message": f"icmp probe to {target_ip} via {interface or 'auto'} ok",
             "duration_ms": 5,
         }
 
@@ -333,8 +356,10 @@ def test_run_case_cli_auto_discovers_real_rtc_function(tmp_path: Path, monkeypat
             "success": True,
             "device": device or "/dev/rtc0",
             "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+            "time_iso": "2026-03-06T12:00:00+00:00",
             "source": "hwclock",
             "raw": "2026-03-06 12:00:00",
+            "message": f"rtc read ok on {device or '/dev/rtc0'}",
         }
 
     monkeypatch.setattr(RTCCapability, "read_time", fake_read_time)
@@ -368,6 +393,9 @@ def test_run_case_cli_auto_discovers_real_gpio_function(tmp_path: Path, monkeypa
             "chip_count": 1,
             "chips": ["/dev/gpiochip0"],
             "available": True,
+            "success": True,
+            "error_type": None,
+            "message": f"gpio mapping ok for physical pin {physical_pin}",
         }
 
     monkeypatch.setattr(GPIOCapability, "describe_pin", fake_describe_pin)
@@ -398,8 +426,11 @@ def test_run_case_cli_auto_discovers_real_i2c_function(tmp_path: Path, monkeypat
         bus_list = buses or ["/dev/i2c-0", "/dev/i2c-2"]
         return {
             "success": True,
+            "requested_buses": list(bus_list),
             "bus_count": len(bus_list),
             "buses": [{"bus": item, "exists": True} for item in bus_list],
+            "error_type": None,
+            "message": f"i2c scan ok, buses={len(bus_list)}",
         }
 
     monkeypatch.setattr(I2CCapability, "scan_buses", fake_scan_buses)

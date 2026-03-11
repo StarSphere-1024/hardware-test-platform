@@ -25,6 +25,8 @@ def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = Tru
     def fake_ping(self, target_ip, *, interface=None, count=1, timeout=5):
         return {
             "success": eth_success,
+            "target": target_ip,
+            "interface": interface,
             "return_code": 0 if eth_success else 1,
             "stdout": (
                 "1 packets transmitted, 1 received, 0% packet loss\nrtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n"
@@ -32,14 +34,27 @@ def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = Tru
                 else "1 packets transmitted, 0 received, 100% packet loss\n"
             ),
             "stderr": "" if eth_success else "ping timeout",
+            "packet_loss": 0.0 if eth_success else 100.0,
+            "avg_latency_ms": 0.321 if eth_success else 0.0,
+            "message": (
+                f"icmp probe to {target_ip} via {interface or 'auto'} ok"
+                if eth_success
+                else f"icmp probe to {target_ip} via {interface or 'auto'} failed"
+            ),
+            "error_type": None if eth_success else "probe_failed",
             "duration_ms": 5,
         }
 
     def fake_loopback(self, port, *, payload, baudrate=115200, timeout=5):
         return {
             "success": True,
+            "port": port,
+            "payload": payload,
             "message": "loopback ok",
             "received": payload,
+            "matched": True,
+            "baudrate": baudrate,
+            "error_type": None,
             "duration_ms": 4,
         }
 
@@ -48,8 +63,10 @@ def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = Tru
             "success": True,
             "device": device or "/dev/rtc0",
             "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+            "time_iso": "2026-03-06T12:00:00+00:00",
             "source": "hwclock",
             "raw": "2026-03-06 12:00:00",
+            "message": f"rtc read ok on {device or '/dev/rtc0'}",
         }
 
     def fake_describe_pin(self, physical_pin):
@@ -59,14 +76,20 @@ def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = Tru
             "chip_count": 1,
             "chips": ["/dev/gpiochip0"],
             "available": True,
+            "success": True,
+            "error_type": None,
+            "message": f"gpio mapping ok for physical pin {physical_pin}",
         }
 
     def fake_scan_buses(self, buses=None):
         bus_list = buses or ["/dev/i2c-0", "/dev/i2c-2"]
         return {
             "success": True,
+            "requested_buses": list(bus_list),
             "bus_count": len(bus_list),
             "buses": [{"bus": item, "exists": True} for item in bus_list],
+            "error_type": None,
+            "message": f"i2c scan ok, buses={len(bus_list)}",
         }
 
     monkeypatch.setattr(NetworkCapability, "ping", fake_ping)

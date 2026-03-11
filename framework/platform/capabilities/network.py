@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from ..adapters.base import PlatformAdapter
@@ -15,7 +16,7 @@ class NetworkCapability:
         self.board_profile = dict(board_profile or {})
 
     def list_interfaces(self, *, include_loopback: bool = False) -> list[str]:
-        interfaces = [path.rsplit("/", 1)[-1] for path in self.adapter.list_paths("/sys/class/net/*")]
+        interfaces = [path.rsplit("/", 1)[-1] for path in self.adapter._list_paths("/sys/class/net/*")]
         if include_loopback:
             return interfaces
         return [name for name in interfaces if name != "lo"]
@@ -34,10 +35,36 @@ class NetworkCapability:
             command.extend(["-I", interface])
         command.append(target_ip)
         result = self.adapter.execute(command, timeout=max(timeout * count, timeout + 1))
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+        packet_loss = self._parse_packet_loss(stdout)
+        avg_latency_ms = self._parse_average_latency(stdout)
         return {
             "success": result.success,
+            "target": target_ip,
+            "interface": interface,
             "return_code": result.return_code,
-            "stdout": result.stdout,
-            "stderr": result.stderr,
+            "stdout": stdout,
+            "stderr": stderr,
+            "packet_loss": packet_loss,
+            "avg_latency_ms": avg_latency_ms,
+            "error_type": None if result.success else "probe_failed",
+            "message": (
+                f"icmp probe to {target_ip} via {interface or 'auto'} ok"
+                if result.success
+                else f"icmp probe to {target_ip} via {interface or 'auto'} failed"
+            ),
             "duration_ms": result.duration_ms,
         }
+
+    def _parse_packet_loss(self, output: str) -> float:
+        match = re.search(r"([\d.]+)%\s+packet loss", output)
+        if match:
+            return float(match.group(1))
+        return 100.0 if output else 0.0
+
+    def _parse_average_latency(self, output: str) -> float:
+        match = re.search(r"(?:rtt|round-trip) min/avg/max(?:/mdev)? = [\d.]+/([\d.]+)/", output)
+        if match:
+            return float(match.group(1))
+        return 0.0

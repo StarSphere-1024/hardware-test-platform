@@ -34,17 +34,17 @@ class PlatformAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def path_exists(self, path: str | Path) -> bool:
-        raise NotImplementedError
-
-    @abstractmethod
-    def read_text(self, path: str | Path, *, encoding: str = "utf-8") -> str:
-        raise NotImplementedError
-
-    @abstractmethod
-    def list_paths(self, pattern: str) -> list[str]:
-        raise NotImplementedError
-
-    @abstractmethod
     def get_system_info(self) -> dict[str, Any]:
         raise NotImplementedError
+
+    # These hooks intentionally stay protected. They represent host filesystem
+    # access used by Linux-style capability implementations rather than the
+    # platform-agnostic adapter contract consumed by the execution layer.
+    def _path_exists(self, path: str | Path) -> bool:
+        raise NotImplementedError(f"{self.__class__.__name__} does not expose filesystem path checks")
+
+    def _read_text(self, path: str | Path, *, encoding: str = "utf-8") -> str:
+        raise NotImplementedError(f"{self.__class__.__name__} does not expose filesystem text reads")
+
+    def _list_paths(self, pattern: str) -> list[str]:
+        raise NotImplementedError(f"{self.__class__.__name__} does not expose filesystem path discovery")

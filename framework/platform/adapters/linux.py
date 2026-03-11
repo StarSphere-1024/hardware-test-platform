@@ -57,13 +57,13 @@ class LinuxAdapter(PlatformAdapter):
                 duration_ms=int((time.perf_counter() - started_at) * 1000),
             )
 
-    def path_exists(self, path: str | Path) -> bool:
+    def _path_exists(self, path: str | Path) -> bool:
         return Path(path).exists()
 
-    def read_text(self, path: str | Path, *, encoding: str = "utf-8") -> str:
+    def _read_text(self, path: str | Path, *, encoding: str = "utf-8") -> str:
         return Path(path).read_text(encoding=encoding)
 
-    def list_paths(self, pattern: str) -> list[str]:
+    def _list_paths(self, pattern: str) -> list[str]:
         return sorted(glob.glob(pattern))
 
     def get_system_info(self) -> dict[str, Any]:

@@ -18,7 +18,7 @@ class SerialCapability:
     def list_ports(self) -> list[str]:
         ports: list[str] = []
         for pattern in ("/dev/ttyS*", "/dev/ttyUSB*", "/dev/ttyACM*"):
-            ports.extend(self.adapter.list_paths(pattern))
+            ports.extend(self.adapter._list_paths(pattern))
         return sorted(set(ports))
 
     def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
@@ -30,7 +30,7 @@ class SerialCapability:
         return None
 
     def port_exists(self, port: str) -> bool:
-        return self.adapter.path_exists(port)
+        return self.adapter._path_exists(port)
 
     def loopback_test(
         self,
@@ -43,9 +43,13 @@ class SerialCapability:
         if not self.port_exists(port):
             return {
                 "success": False,
+                "port": port,
+                "payload": payload,
+                "received": None,
+                "matched": False,
+                "baudrate": baudrate,
                 "error_type": "device_not_found",
                 "message": f"serial port not found: {port}",
-                "payload": payload,
             }
 
         try:
@@ -53,9 +57,13 @@ class SerialCapability:
         except ImportError:
             return {
                 "success": False,
+                "port": port,
+                "payload": payload,
+                "received": None,
+                "matched": False,
+                "baudrate": baudrate,
                 "error_type": "missing_dependency",
                 "message": "pyserial is not installed",
-                "payload": payload,
             }
 
         started_at = time.perf_counter()
@@ -69,15 +77,24 @@ class SerialCapability:
         except Exception as error:
             return {
                 "success": False,
+                "port": port,
+                "payload": payload,
+                "received": None,
+                "matched": False,
+                "baudrate": baudrate,
                 "error_type": "io_error",
                 "message": str(error),
-                "payload": payload,
             }
 
+        matched = received == encoded
         return {
-            "success": received == encoded,
-            "message": "loopback ok" if received == encoded else "loopback mismatch",
+            "success": matched,
+            "port": port,
             "payload": payload,
             "received": received.decode("utf-8", errors="replace"),
+            "matched": matched,
+            "baudrate": baudrate,
+            "error_type": None if matched else "payload_mismatch",
+            "message": "loopback ok" if matched else "loopback mismatch",
             "duration_ms": int((time.perf_counter() - started_at) * 1000),
         }

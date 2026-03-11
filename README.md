@@ -56,22 +56,22 @@ source venv/bin/activate
 
 ### 场景一：执行整套测试套件（Fixture）
 
-执行一套完整的验证场景（例如 Linux 主机的默认全量检查）：
+执行一套完整的验证场景（例如 RK3576 冒烟测试）：
 ```bash
-python -m framework.cli.run_fixture --config fixtures/linux_host_pc.json
+python -m framework.cli.run_fixture --config fixtures/rk3576_smoke.json
 ```
 
 ** 带实时的交互监控运行（强烈推荐）：**
 只需在上述命令末尾追加 `--dashboard` 参数即可唤起 TUI dashboard，实时查看测试流及单项状态：
 ```bash
-python -m framework.cli.run_fixture --config fixtures/linux_host_pc.json --dashboard
+python -m framework.cli.run_fixture --config fixtures/rk3576_smoke.json --dashboard
 ```
 
 ### 场景二：执行特定模块用例（Case）
 
 如果在开发阶段仅需跑单模块（如：跑通`网络测试` 模块下的所有动作）：
 ```bash
-python -m framework.cli.run_case --config cases/linux_host_pc/eth_case.json
+python -m framework.cli.run_case --config cases/rk3576/eth_case.json
 ```
 
 ### 场景三：极简调试原子测试（Function）

@@ -15,8 +15,8 @@ class ZephyrRTCCapability(ZephyrCapabilityMixin, RTCCapabilityContract):
     def device_exists(self, device: str) -> bool:
         raise self._not_implemented("device_exists")
 
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
-        raise self._not_implemented("resolve_primary")
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
+        raise self._not_implemented("resolve_bound_interface")
 
     def read_time(self, device: str | None = None) -> dict[str, Any]:
         raise self._not_implemented("read_time")

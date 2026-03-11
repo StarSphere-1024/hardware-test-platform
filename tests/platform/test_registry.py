@@ -58,10 +58,10 @@ def test_capabilities_are_safe_when_devices_are_absent() -> None:
     assert isinstance(rtc_devices, list)
 
 
-def test_network_capability_prefers_board_profile_candidates() -> None:
+def test_network_capability_prefers_declared_board_interfaces() -> None:
     board_profile = ConfigResolver(REPO_ROOT).resolve_fixture("fixtures/linux_host_pc.json").board_profile
     _, capabilities = PlatformRegistry().create_runtime_registries(board_profile)
 
-    resolved = capabilities["network"].resolve_primary(["definitely-missing-interface", "lo"])
+    resolved = capabilities["network"].resolve_bound_interface(["definitely-missing-interface", "lo"])
 
     assert resolved == "lo"

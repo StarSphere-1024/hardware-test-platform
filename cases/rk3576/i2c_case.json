@@ -14,7 +14,7 @@
     {
       "name": "test_i2c_scan",
       "params": {
-        "bus": "${resolved.interfaces.i2c.selected}",
+        "bus": "/dev/i2c-0",
         "scan_all": true
       },
       "expect": {

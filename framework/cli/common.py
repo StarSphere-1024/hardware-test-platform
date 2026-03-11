@@ -230,10 +230,8 @@ def build_function_resolved_config(
     resolved_interfaces = {
         name: {
             "name": name,
-            "selected": binding.items[0] if binding.items else None,
-            "primary": binding.items[0] if binding.items else None,
-            "items": list(binding.items),
-            "candidates": list(binding.items),
+            "bound": binding.items[0] if binding.items else None,
+            "declared": list(binding.items),
             "description": binding.description,
             "metadata": dict(binding.metadata),
             "source": "board_profile",

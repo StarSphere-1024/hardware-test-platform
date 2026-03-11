@@ -24,7 +24,7 @@ class NetworkCapabilityContract(CapabilityBase):
         raise NotImplementedError
 
     @abstractmethod
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -40,7 +40,7 @@ class SerialCapabilityContract(CapabilityBase):
         raise NotImplementedError
 
     @abstractmethod
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -91,7 +91,7 @@ class I2CCapabilityContract(CapabilityBase):
         raise NotImplementedError
 
     @abstractmethod
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
         raise NotImplementedError
 
     @abstractmethod
@@ -111,7 +111,7 @@ class RTCCapabilityContract(CapabilityBase):
         raise NotImplementedError
 
     @abstractmethod
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
         raise NotImplementedError
 
     @abstractmethod

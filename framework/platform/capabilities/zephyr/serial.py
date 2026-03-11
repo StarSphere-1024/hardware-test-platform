@@ -12,8 +12,8 @@ class ZephyrSerialCapability(ZephyrCapabilityMixin, SerialCapabilityContract):
     def list_ports(self) -> list[str]:
         raise self._not_implemented("list_ports")
 
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
-        raise self._not_implemented("resolve_primary")
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
+        raise self._not_implemented("resolve_bound_interface")
 
     def port_exists(self, port: str) -> bool:
         raise self._not_implemented("port_exists")

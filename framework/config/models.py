@@ -49,12 +49,7 @@ class InterfaceBinding(SerializableModel):
             )
         if isinstance(value, dict):
             raw_items = value.get("items")
-            if raw_items is None:
-                raw_items = value.get("candidates")
             items = [item for item in raw_items if isinstance(item, str)] if isinstance(raw_items, list) else []
-            primary = value.get("primary")
-            if isinstance(primary, str) and primary not in items:
-                items = [primary, *items]
             description = value.get("description")
             return cls(
                 items=items,

@@ -7,7 +7,7 @@ class _FakeNetworkCapability:
     def __init__(self) -> None:
         self.calls = []
 
-    def resolve_primary(self):
+    def resolve_bound_interface(self):
         return "eth0"
 
     def ping(self, target_ip, *, interface=None, count=1, timeout=5):

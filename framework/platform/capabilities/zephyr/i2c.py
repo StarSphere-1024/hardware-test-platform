@@ -15,8 +15,8 @@ class ZephyrI2CCapability(ZephyrCapabilityMixin, I2CCapabilityContract):
     def bus_exists(self, bus: str) -> bool:
         raise self._not_implemented("bus_exists")
 
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
-        raise self._not_implemented("resolve_primary")
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
+        raise self._not_implemented("resolve_bound_interface")
 
     def scan_buses(self, buses: list[str] | None = None) -> dict[str, Any]:
         raise self._not_implemented("scan_buses")

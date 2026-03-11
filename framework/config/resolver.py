@@ -167,13 +167,11 @@ class ConfigResolver:
     def _build_resolved_interfaces(self, board: BoardProfile) -> dict[str, Any]:
         resolved: dict[str, Any] = {}
         for name, binding in board.interfaces.items():
-            selected = binding.items[0] if binding.items else None
+            bound = binding.items[0] if binding.items else None
             resolved[name] = {
                 "name": name,
-                "selected": selected,
-                "primary": selected,
-                "items": list(binding.items),
-                "candidates": list(binding.items),
+                "bound": bound,
+                "declared": list(binding.items),
                 "description": binding.description,
                 "metadata": copy.deepcopy(binding.metadata),
                 "source": "board_profile",

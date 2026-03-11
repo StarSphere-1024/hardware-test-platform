@@ -118,28 +118,23 @@ def validate_board_profile_data(data: Any, *, source: str | None = None) -> None
     interfaces = root.get("interfaces")
     if interfaces is not None:
         interfaces_mapping = _ensure_mapping(interfaces, field_path="interfaces", source=source)
-        for name, candidates in interfaces_mapping.items():
+        for name, interface_value in interfaces_mapping.items():
             if not isinstance(name, str):
                 raise SchemaValidationError("expected string key", field_path="interfaces", source=source)
-            if isinstance(candidates, list):
-                if any(not isinstance(item, str) for item in candidates):
+            if isinstance(interface_value, list):
+                if any(not isinstance(item, str) for item in interface_value):
                     raise SchemaValidationError("expected list of strings", field_path=f"interfaces.{name}", source=source)
                 continue
-            candidate_mapping = _ensure_mapping(candidates, field_path=f"interfaces.{name}", source=source)
-            primary = candidate_mapping.get("primary")
-            if primary is not None and not isinstance(primary, str):
-                raise SchemaValidationError("expected string", field_path=f"interfaces.{name}.primary", source=source)
-            raw_candidates = candidate_mapping.get("items")
-            if raw_candidates is None:
-                raw_candidates = candidate_mapping.get("candidates")
-            if raw_candidates is not None and (
-                not isinstance(raw_candidates, list) or any(not isinstance(item, str) for item in raw_candidates)
+            interface_mapping = _ensure_mapping(interface_value, field_path=f"interfaces.{name}", source=source)
+            raw_items = interface_mapping.get("items")
+            if raw_items is not None and (
+                not isinstance(raw_items, list) or any(not isinstance(item, str) for item in raw_items)
             ):
                 raise SchemaValidationError("expected list of strings", field_path=f"interfaces.{name}.items", source=source)
-            description = candidate_mapping.get("description")
+            description = interface_mapping.get("description")
             if description is not None and not isinstance(description, str):
                 raise SchemaValidationError("expected string", field_path=f"interfaces.{name}.description", source=source)
-            metadata = candidate_mapping.get("metadata")
+            metadata = interface_mapping.get("metadata")
             if metadata is not None:
                 _ensure_mapping(metadata, field_path=f"interfaces.{name}.metadata", source=source)
 

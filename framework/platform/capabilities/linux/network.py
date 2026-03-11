@@ -15,8 +15,8 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
             return interfaces
         return [name for name in interfaces if name != "lo"]
 
-    def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
-        preferred = candidates or self._interface_candidates("eth")
+    def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
+        preferred = declared or self._declared_interfaces("eth")
         available = set(self.list_interfaces(include_loopback=True))
         for candidate in preferred:
             if candidate in available:
@@ -51,19 +51,13 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
             "duration_ms": result.duration_ms,
         }
 
-    def _interface_candidates(self, name: str) -> list[str]:
+    def _declared_interfaces(self, name: str) -> list[str]:
         value = self.board_profile.get("interfaces", {}).get(name, [])
         if isinstance(value, list):
             return [item for item in value if isinstance(item, str)]
         if isinstance(value, dict):
-            candidates = value.get("items")
-            if candidates is None:
-                candidates = value.get("candidates", [])
-            primary = value.get("primary")
-            items = [item for item in candidates if isinstance(item, str)]
-            if isinstance(primary, str) and primary not in items:
-                return [primary, *items]
-            return items
+            items = value.get("items")
+            return [item for item in items if isinstance(item, str)] if isinstance(items, list) else []
         return []
 
     def _parse_packet_loss(self, output: str) -> float:

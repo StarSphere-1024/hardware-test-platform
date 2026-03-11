@@ -24,7 +24,7 @@ def test_eth_ping(
             "details": {"target_ip": target_ip, "interface": interface},
         }
 
-    selected_interface = interface or network.resolve_primary()
+    selected_interface = interface or network.resolve_bound_interface()
     ping_result = network.ping(target_ip, interface=selected_interface, count=count, timeout=timeout)
     stdout = ping_result.get("stdout", "")
     packet_loss = float(ping_result.get("packet_loss", 0.0))

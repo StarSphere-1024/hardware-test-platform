@@ -99,7 +99,7 @@ python -m framework.cli.run_function \
 1. **Function (平台能效原子)**: 存放于 `functions/`。是开发者写的底层 Python 测试逻辑（如 `test_eth_ping.py`）。严禁主动读配置，接口能力及变量全部由平台经 `capability_registry` 派发。
 2. **Case (测试用例组合)**: 存放于 `cases/` 下的 JSON。用于描述单个模块（例如 GPIO模块）该运行哪些 Function，需要怎样的重试机制与超时限制。
 3. **Fixture (端到端大场景)**: 存放于 `fixtures/` 下的高阶 JSON。串联起若干个 Case，它代表着一次真正的验收、PCBA 冒烟、长期压测。
-4. **Board Profile (跨板隔离化配置)**: 存放于 `config/boards/` 下。描述一块特定板卡到底具备哪些实体接口名（比如 I2C 叫具体的 /dev/i2c-2）。一套 Case 只要绑上不同的 Profile 即可实现“**换板不换执行逻辑**”。
+4. **Board Profile (板级资源清单)**: 存放于 `config/boards/` 下。描述一块特定板卡到底具备哪些实体接口名、支持哪些 case、依赖哪些工具。当前实践中，Case 和 Fixture 由各个开发板分别维护，Board Profile 主要负责资源声明、准入约束和执行前预检；运行态只暴露 `resolved_interfaces.*.bound/declared` 视图用于追踪。
 
 ### Platform Capability 结构
 
@@ -109,7 +109,7 @@ python -m framework.cli.run_function \
 - `framework/platform/capabilities/linux/`：当前可运行的 Linux capability 实现。
 - `framework/platform/capabilities/zephyr/`：Zephyr MCU capability skeleton，目前仅定义类结构和方法入口，尚未接入 Zephyr adapter、串口 shell 或其他 transport。
 
-这意味着 Function 层继续只依赖统一 capability 语义，后续接入 Zephyr 时主要增量会落在 adapter、capability 实现和 board profile，而不是复制一套 Function。
+这意味着 Function 层继续只依赖统一 capability 语义；而 Case / Fixture 是否复用，由具体板卡测试策略决定。当前仓库默认按板卡分别维护 Case / Fixture，后续接入 Zephyr 时主要增量会落在 adapter、capability 实现和 board profile。
 
 ## 📂 工程结构
 
@@ -156,8 +156,9 @@ hardware-test-platform/
 ### 接入一款全新设备的适配模板
 当我们需要将测试平台移植给一个全新的硬件平台（例如 `rk3588`主板）:
 1. 到 `config/boards/<新建板系>.json` 添加一个新的 Profile 配置表。
-2. 将此目标板所有可用的 `interfaces`（如网口名称、GPIO总线等）与 `capabilities` 写全。无需改动前人的 Function 即可复用资产。
-3. 如果是新平台族（例如 Zephyr MCU），在 `framework/platform/adapters/` 和 `framework/platform/capabilities/<platform>/` 下补齐实现，并在 `framework/platform/registry.py` 中完成装配。
+2. 将此目标板所有可用的 `interfaces`（如网口名称、GPIO 总线等）与 `capabilities` 写全。
+3. 为该板卡单独维护对应的 `cases/<board>/` 与 `fixtures/<board>.json`，把真实测试接口和判定标准直接写在板卡资产里。
+4. 如果是新平台族（例如 Zephyr MCU），在 `framework/platform/adapters/` 和 `framework/platform/capabilities/<platform>/` 下补齐实现，并在 `framework/platform/registry.py` 中完成装配。
 
 ### Zephyr 扩展现状
 
@@ -165,7 +166,7 @@ hardware-test-platform/
 
 - 已有与 Linux 同名的 capability 类骨架，便于未来逐项填充实现。
 - 目前尚未提供 Zephyr adapter，也还没有把串口 shell、BLE、Wi-Fi 等 transport 映射到 capability contract。
-- 因此当前可以继续复用 Function/Case/Fixture 资产设计，但 Zephyr 真正执行链路仍待后续实现。
+- 因此当前只能先对齐 capability contract 和目录结构；Zephyr 真正执行链路仍待后续实现，届时应按 Zephyr 板卡维护自己的 case 与 fixture。
 
 ## 📚 更多设计细节参考
 

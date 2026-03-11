@@ -6,7 +6,7 @@
 
 - **分层资产编排**：支持原子级函数 (`Function`)、模块级用例 (`Case`) 到场景级套件 (`Fixture`) 的自由组合。
 - **配置驱动执行**：完全通过 JSON 描述测试对象、运行参数和重试/超时策略，隔离代码逻辑与执行诉求。
-- **平台硬件抽象**：基于 `Board Profile` 和 `Platform Capability`，抹平底层 Linux 或不同设备的接口差异。
+- **平台硬件抽象**：基于 `Board Profile`、公共 capability contract 和平台实现包，统一测试语义并隔离 Linux/Zephyr 等平台差异。
 - **全链路可观测性**：内置实时终端大盘 (Dashboard)、完整的执行快照 (Snapshot)、事件流 (JSONL) 以及标准的文本与结构化 JSON 报告。
 
 ## 🚀 安装与部署
@@ -101,6 +101,16 @@ python -m framework.cli.run_function \
 3. **Fixture (端到端大场景)**: 存放于 `fixtures/` 下的高阶 JSON。串联起若干个 Case，它代表着一次真正的验收、PCBA 冒烟、长期压测。
 4. **Board Profile (跨板隔离化配置)**: 存放于 `config/boards/` 下。描述一块特定板卡到底具备哪些实体接口名（比如 I2C 叫具体的 /dev/i2c-2）。一套 Case 只要绑上不同的 Profile 即可实现“**换板不换执行逻辑**”。
 
+### Platform Capability 结构
+
+当前 platform capability 已按“公共 contract + 平台实现”方式组织：
+
+- `framework/platform/capabilities/base.py`：定义 network、serial、gpio、i2c、rtc、system_info 的公共 contract。
+- `framework/platform/capabilities/linux/`：当前可运行的 Linux capability 实现。
+- `framework/platform/capabilities/zephyr/`：Zephyr MCU capability skeleton，目前仅定义类结构和方法入口，尚未接入 Zephyr adapter、串口 shell 或其他 transport。
+
+这意味着 Function 层继续只依赖统一 capability 语义，后续接入 Zephyr 时主要增量会落在 adapter、capability 实现和 board profile，而不是复制一套 Function。
+
 ## 📂 工程结构
 
 ```text
@@ -114,6 +124,9 @@ hardware-test-platform/
 │   ├── config/ & domain/   # Schema 解析和状态机的流转定义
 │   ├── execution/          # 测试用例的 DAG 解析调度和容错机制分发
 │   ├── platform/           # 系统底层设备能力及网关等屏蔽层隔离组件
+│   │   ├── adapters/       # Linux / future Zephyr adapters
+│   │   ├── capabilities/   # capability contracts + platform-specific implementations
+│   │   └── registry.py     # 按 board profile.platform 装配 adapter/capability
 │   └── observability/      # 全链路监控、执行日志、快照更新、TUI报表输出
 ├── framework/dashboard/    # 终端交互式展示面板渲染 (TUI)
 ├── reports/                # 归档生成的自动化出货与测试报表
@@ -144,6 +157,15 @@ hardware-test-platform/
 当我们需要将测试平台移植给一个全新的硬件平台（例如 `rk3588`主板）:
 1. 到 `config/boards/<新建板系>.json` 添加一个新的 Profile 配置表。
 2. 将此目标板所有可用的 `interfaces`（如网口名称、GPIO总线等）与 `capabilities` 写全。无需改动前人的 Function 即可复用资产。
+3. 如果是新平台族（例如 Zephyr MCU），在 `framework/platform/adapters/` 和 `framework/platform/capabilities/<platform>/` 下补齐实现，并在 `framework/platform/registry.py` 中完成装配。
+
+### Zephyr 扩展现状
+
+仓库当前已经预留 `framework/platform/capabilities/zephyr/` 目录，但它还是 skeleton 状态：
+
+- 已有与 Linux 同名的 capability 类骨架，便于未来逐项填充实现。
+- 目前尚未提供 Zephyr adapter，也还没有把串口 shell、BLE、Wi-Fi 等 transport 映射到 capability contract。
+- 因此当前可以继续复用 Function/Case/Fixture 资产设计，但 Zephyr 真正执行链路仍待后续实现。
 
 ## 📚 更多设计细节参考
 

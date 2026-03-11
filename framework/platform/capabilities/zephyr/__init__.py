@@ -1,7 +1,22 @@
-"""Zephyr capability package placeholder.
+"""Zephyr capability skeletons.
 
-Concrete Zephyr capability implementations will live here once the MCU backend
-is introduced.
+These classes define the module layout and public names for a future Zephyr MCU
+backend. They intentionally raise ``NotImplementedError`` until a Zephyr
+adapter and transport bindings are introduced.
 """
 
-__all__: list[str] = []
+from .gpio import ZephyrGPIOCapability
+from .i2c import ZephyrI2CCapability
+from .network import ZephyrNetworkCapability
+from .rtc import ZephyrRTCCapability
+from .serial import ZephyrSerialCapability
+from .system_info import ZephyrSystemInfoCapability
+
+__all__ = [
+	"ZephyrGPIOCapability",
+	"ZephyrI2CCapability",
+	"ZephyrNetworkCapability",
+	"ZephyrRTCCapability",
+	"ZephyrSerialCapability",
+	"ZephyrSystemInfoCapability",
+]

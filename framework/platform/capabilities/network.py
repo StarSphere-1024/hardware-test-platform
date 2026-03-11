@@ -22,12 +22,27 @@ class NetworkCapability:
         return [name for name in interfaces if name != "lo"]
 
     def resolve_primary(self, candidates: list[str] | None = None) -> str | None:
-        preferred = candidates or self.board_profile.get("interfaces", {}).get("eth", [])
+        preferred = candidates or self._interface_candidates("eth")
         available = set(self.list_interfaces(include_loopback=True))
         for candidate in preferred:
             if candidate in available:
                 return candidate
         return None
+
+    def _interface_candidates(self, name: str) -> list[str]:
+        value = self.board_profile.get("interfaces", {}).get(name, [])
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, str)]
+        if isinstance(value, dict):
+            candidates = value.get("items")
+            if candidates is None:
+                candidates = value.get("candidates", [])
+            primary = value.get("primary")
+            items = [item for item in candidates if isinstance(item, str)]
+            if isinstance(primary, str) and primary not in items:
+                return [primary, *items]
+            return items
+        return []
 
     def ping(self, target_ip: str, *, interface: str | None = None, count: int = 1, timeout: int = 5) -> dict[str, Any]:
         command = ["ping", "-c", str(count), "-W", str(timeout)]

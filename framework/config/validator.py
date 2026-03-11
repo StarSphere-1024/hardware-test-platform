@@ -121,8 +121,27 @@ def validate_board_profile_data(data: Any, *, source: str | None = None) -> None
         for name, candidates in interfaces_mapping.items():
             if not isinstance(name, str):
                 raise SchemaValidationError("expected string key", field_path="interfaces", source=source)
-            if not isinstance(candidates, list) or any(not isinstance(item, str) for item in candidates):
-                raise SchemaValidationError("expected list of strings", field_path=f"interfaces.{name}", source=source)
+            if isinstance(candidates, list):
+                if any(not isinstance(item, str) for item in candidates):
+                    raise SchemaValidationError("expected list of strings", field_path=f"interfaces.{name}", source=source)
+                continue
+            candidate_mapping = _ensure_mapping(candidates, field_path=f"interfaces.{name}", source=source)
+            primary = candidate_mapping.get("primary")
+            if primary is not None and not isinstance(primary, str):
+                raise SchemaValidationError("expected string", field_path=f"interfaces.{name}.primary", source=source)
+            raw_candidates = candidate_mapping.get("items")
+            if raw_candidates is None:
+                raw_candidates = candidate_mapping.get("candidates")
+            if raw_candidates is not None and (
+                not isinstance(raw_candidates, list) or any(not isinstance(item, str) for item in raw_candidates)
+            ):
+                raise SchemaValidationError("expected list of strings", field_path=f"interfaces.{name}.items", source=source)
+            description = candidate_mapping.get("description")
+            if description is not None and not isinstance(description, str):
+                raise SchemaValidationError("expected string", field_path=f"interfaces.{name}.description", source=source)
+            metadata = candidate_mapping.get("metadata")
+            if metadata is not None:
+                _ensure_mapping(metadata, field_path=f"interfaces.{name}.metadata", source=source)
 
     for key in ("capabilities", "metadata"):
         value = root.get(key)

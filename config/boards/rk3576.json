@@ -13,26 +13,36 @@
     "i2c_case"
   ],
   "interfaces": {
-    "eth": [
-      "end1",
-      "end0",
-      "eth0"
-    ],
-    "uart": [
-      "/dev/ttyS4",
-      "/dev/ttyFIQ0",
-      "/dev/ttyUSB0"
-    ],
-    "gpio": [
-      "/dev/gpiochip0"
-    ],
-    "i2c": [
-      "/dev/i2c-0",
-      "/dev/i2c-2"
-    ],
-    "rtc": [
-      "/dev/rtc0"
-    ]
+    "eth": {
+      "items": [
+        "end1",
+        "end0",
+        "eth0"
+      ]
+    },
+    "uart": {
+      "items": [
+        "/dev/ttyS4",
+        "/dev/ttyFIQ0",
+        "/dev/ttyUSB0"
+      ]
+    },
+    "gpio": {
+      "items": [
+        "/dev/gpiochip0"
+      ]
+    },
+    "i2c": {
+      "items": [
+        "/dev/i2c-0",
+        "/dev/i2c-2"
+      ]
+    },
+    "rtc": {
+      "items": [
+        "/dev/rtc0"
+      ]
+    }
   },
   "capabilities": {
     "network": {

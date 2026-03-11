@@ -228,8 +228,17 @@ def build_function_resolved_config(
         precheck=False,
     )
     resolved_interfaces = {
-        name: {"primary": candidates[0] if candidates else None, "candidates": list(candidates)}
-        for name, candidates in board_profile.interfaces.items()
+        name: {
+            "name": name,
+            "selected": binding.items[0] if binding.items else None,
+            "primary": binding.items[0] if binding.items else None,
+            "items": list(binding.items),
+            "candidates": list(binding.items),
+            "description": binding.description,
+            "metadata": dict(binding.metadata),
+            "source": "board_profile",
+        }
+        for name, binding in board_profile.interfaces.items()
     }
     return ResolvedExecutionConfig(
         request=request.to_dict(),

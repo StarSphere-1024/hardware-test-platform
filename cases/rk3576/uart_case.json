@@ -14,7 +14,7 @@
     {
       "name": "test_uart_loopback",
       "params": {
-        "port": "${resolved.interfaces.uart.primary}",
+        "port": "${resolved.interfaces.uart.selected}",
         "baudrate": 115200,
         "payload": "rk3576-loopback"
       },

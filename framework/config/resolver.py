@@ -166,10 +166,17 @@ class ConfigResolver:
 
     def _build_resolved_interfaces(self, board: BoardProfile) -> dict[str, Any]:
         resolved: dict[str, Any] = {}
-        for name, candidates in board.interfaces.items():
+        for name, binding in board.interfaces.items():
+            selected = binding.items[0] if binding.items else None
             resolved[name] = {
-                "primary": candidates[0] if candidates else None,
-                "candidates": list(candidates),
+                "name": name,
+                "selected": selected,
+                "primary": selected,
+                "items": list(binding.items),
+                "candidates": list(binding.items),
+                "description": binding.description,
+                "metadata": copy.deepcopy(binding.metadata),
+                "source": "board_profile",
             }
         return resolved
 
@@ -183,7 +190,7 @@ class ConfigResolver:
             "product": board.product.to_dict(),
             "runtime": global_config.runtime.to_dict(),
             "observability": global_config.observability.to_dict(),
-            "interfaces": copy.deepcopy(board.interfaces),
+            "interfaces": copy.deepcopy(board.to_dict().get("interfaces", {})),
             "capabilities": copy.deepcopy(board.capabilities),
             "metadata": copy.deepcopy(board.metadata),
             "resolved": {"interfaces": copy.deepcopy(resolved_interfaces)},

@@ -25,8 +25,11 @@ def test_fixture_resolution_builds_resolved_execution_config() -> None:
     assert resolved.board_profile.profile_name == "linux_host_pc"
     assert resolved.board_profile.product.sku == "LINUX_HOST_PC"
     assert resolved.board_profile.product.stage == "DEV"
-    assert resolved.resolved_interfaces["eth"]["primary"] == "eno1"
-    assert resolved.resolved_interfaces["i2c"]["primary"] == "/dev/i2c-0"
+    assert resolved.resolved_interfaces["eth"]["selected"] == "eno1"
+    assert resolved.resolved_interfaces["eth"]["selected"] == "eno1"
+    assert resolved.resolved_interfaces["eth"]["source"] == "board_profile"
+    assert resolved.resolved_interfaces["eth"]["items"][0] == "eno1"
+    assert resolved.resolved_interfaces["i2c"]["selected"] == "/dev/i2c-0"
     assert len(resolved.cases) == 4
     assert resolved.cases[0].functions[0].params["interface"] == "eno1"
     assert resolved.cases[1].functions[0].params["port"] == "/dev/ttyUSB0"

@@ -35,6 +35,36 @@ class ProductConfig(SerializableModel):
 
 
 @dataclass(slots=True)
+class InterfaceBinding(SerializableModel):
+    items: list[str] = field(default_factory=list)
+    description: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_config(cls, value: Any) -> "InterfaceBinding":
+        if isinstance(value, list):
+            items = [item for item in value if isinstance(item, str)]
+            return cls(
+                items=items,
+            )
+        if isinstance(value, dict):
+            raw_items = value.get("items")
+            if raw_items is None:
+                raw_items = value.get("candidates")
+            items = [item for item in raw_items if isinstance(item, str)] if isinstance(raw_items, list) else []
+            primary = value.get("primary")
+            if isinstance(primary, str) and primary not in items:
+                items = [primary, *items]
+            description = value.get("description")
+            return cls(
+                items=items,
+                description=description if isinstance(description, str) else None,
+                metadata=dict(value.get("metadata", {})) if isinstance(value.get("metadata"), dict) else {},
+            )
+        raise TypeError(f"unsupported interface binding value: {value!r}")
+
+
+@dataclass(slots=True)
 class RuntimeDefaults(SerializableModel):
     default_timeout: int = 60
     default_retry: int = 0
@@ -74,7 +104,7 @@ class BoardProfile(SerializableModel):
     platform: str
     product: ProductConfig
     supported_cases: list[str] = field(default_factory=list)
-    interfaces: dict[str, list[str]] = field(default_factory=dict)
+    interfaces: dict[str, InterfaceBinding] = field(default_factory=dict)
     capabilities: dict[str, Any] = field(default_factory=dict)
     tools_required: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -90,7 +120,7 @@ class BoardProfile(SerializableModel):
                 stage=product_data["stage"],
             ),
             supported_cases=list(data.get("supported_cases", [])),
-            interfaces={key: list(value) for key, value in data.get("interfaces", {}).items()},
+            interfaces={key: InterfaceBinding.from_config(value) for key, value in data.get("interfaces", {}).items()},
             capabilities=dict(data.get("capabilities", {})),
             tools_required=list(data.get("tools_required", [])),
             metadata=dict(data.get("metadata", {})),

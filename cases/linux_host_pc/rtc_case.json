@@ -13,7 +13,7 @@
     {
       "name": "test_rtc_read",
       "params": {
-        "rtc_device": "${resolved.interfaces.rtc.primary}"
+        "rtc_device": "${resolved.interfaces.rtc.selected}"
       },
       "expect": {
         "pass_policy": "all",

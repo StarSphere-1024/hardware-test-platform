@@ -13,7 +13,7 @@
     {
       "name": "test_i2c_scan",
       "params": {
-        "bus": "${resolved.interfaces.i2c.primary}",
+        "bus": "${resolved.interfaces.i2c.selected}",
         "scan_all": true
       },
       "expect": {

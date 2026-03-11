@@ -1,19 +1,11 @@
-"""Linux GPIO capability."""
+"""Linux GPIO capability implementation."""
 
 from __future__ import annotations
 
-from typing import Any
-
-from ..adapters.base import PlatformAdapter
+from ..base import GPIOCapabilityContract
 
 
-class GPIOCapability:
-    name = "gpio"
-
-    def __init__(self, adapter: PlatformAdapter, board_profile: dict[str, Any] | None = None) -> None:
-        self.adapter = adapter
-        self.board_profile = dict(board_profile or {})
-
+class LinuxGPIOCapability(GPIOCapabilityContract):
     def list_chips(self) -> list[str]:
         return sorted(self.adapter._list_paths("/dev/gpiochip*"))
 

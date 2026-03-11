@@ -1,20 +1,14 @@
-"""Linux serial capability."""
+"""Linux serial capability implementation."""
 
 from __future__ import annotations
 
 import time
 from typing import Any
 
-from ..adapters.base import PlatformAdapter
+from ..base import SerialCapabilityContract
 
 
-class SerialCapability:
-    name = "serial"
-
-    def __init__(self, adapter: PlatformAdapter, board_profile: dict[str, Any] | None = None) -> None:
-        self.adapter = adapter
-        self.board_profile = dict(board_profile or {})
-
+class LinuxSerialCapability(SerialCapabilityContract):
     def list_ports(self) -> list[str]:
         ports: list[str] = []
         for pattern in ("/dev/ttyS*", "/dev/ttyUSB*", "/dev/ttyACM*"):
@@ -28,21 +22,6 @@ class SerialCapability:
             if candidate in available:
                 return candidate
         return None
-
-    def _interface_candidates(self, name: str) -> list[str]:
-        value = self.board_profile.get("interfaces", {}).get(name, [])
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, str)]
-        if isinstance(value, dict):
-            candidates = value.get("items")
-            if candidates is None:
-                candidates = value.get("candidates", [])
-            primary = value.get("primary")
-            items = [item for item in candidates if isinstance(item, str)]
-            if isinstance(primary, str) and primary not in items:
-                return [primary, *items]
-            return items
-        return []
 
     def port_exists(self, port: str) -> bool:
         return self.adapter._path_exists(port)
@@ -113,3 +92,18 @@ class SerialCapability:
             "message": "loopback ok" if matched else "loopback mismatch",
             "duration_ms": int((time.perf_counter() - started_at) * 1000),
         }
+
+    def _interface_candidates(self, name: str) -> list[str]:
+        value = self.board_profile.get("interfaces", {}).get(name, [])
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, str)]
+        if isinstance(value, dict):
+            candidates = value.get("items")
+            if candidates is None:
+                candidates = value.get("candidates", [])
+            primary = value.get("primary")
+            items = [item for item in candidates if isinstance(item, str)]
+            if isinstance(primary, str) and primary not in items:
+                return [primary, *items]
+            return items
+        return []

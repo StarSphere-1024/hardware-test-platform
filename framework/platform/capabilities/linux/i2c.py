@@ -1,19 +1,11 @@
-"""Linux I2C capability."""
+"""Linux I2C capability implementation."""
 
 from __future__ import annotations
 
-from typing import Any
-
-from ..adapters.base import PlatformAdapter
+from ..base import I2CCapabilityContract
 
 
-class I2CCapability:
-    name = "i2c"
-
-    def __init__(self, adapter: PlatformAdapter, board_profile: dict[str, Any] | None = None) -> None:
-        self.adapter = adapter
-        self.board_profile = dict(board_profile or {})
-
+class LinuxI2CCapability(I2CCapabilityContract):
     def list_buses(self) -> list[str]:
         return sorted(self.adapter._list_paths("/dev/i2c-*"))
 
@@ -27,21 +19,6 @@ class I2CCapability:
             if candidate in available:
                 return candidate
         return None
-
-    def _interface_candidates(self, name: str) -> list[str]:
-        value = self.board_profile.get("interfaces", {}).get(name, [])
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, str)]
-        if isinstance(value, dict):
-            candidates = value.get("items")
-            if candidates is None:
-                candidates = value.get("candidates", [])
-            primary = value.get("primary")
-            items = [item for item in candidates if isinstance(item, str)]
-            if isinstance(primary, str) and primary not in items:
-                return [primary, *items]
-            return items
-        return []
 
     def scan_buses(self, buses: list[str] | None = None) -> dict[str, Any]:
         selected_buses = buses or self.list_buses()
@@ -66,3 +43,18 @@ class I2CCapability:
                 else ("i2c scan failed" if selected_buses else "i2c bus not found")
             ),
         }
+
+    def _interface_candidates(self, name: str) -> list[str]:
+        value = self.board_profile.get("interfaces", {}).get(name, [])
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, str)]
+        if isinstance(value, dict):
+            candidates = value.get("items")
+            if candidates is None:
+                candidates = value.get("candidates", [])
+            primary = value.get("primary")
+            items = [item for item in candidates if isinstance(item, str)]
+            if isinstance(primary, str) and primary not in items:
+                return [primary, *items]
+            return items
+        return []

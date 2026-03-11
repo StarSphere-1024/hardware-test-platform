@@ -1,20 +1,13 @@
-"""Linux RTC capability."""
+"""Linux RTC capability implementation."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
 
-from ..adapters.base import PlatformAdapter
+from ..base import RTCCapabilityContract
 
 
-class RTCCapability:
-    name = "rtc"
-
-    def __init__(self, adapter: PlatformAdapter, board_profile: dict[str, Any] | None = None) -> None:
-        self.adapter = adapter
-        self.board_profile = dict(board_profile or {})
-
+class LinuxRTCCapability(RTCCapabilityContract):
     def list_devices(self) -> list[str]:
         devices = self.adapter._list_paths("/dev/rtc*")
         return sorted([path for path in devices if path != "/dev/rtc"] + (["/dev/rtc"] if "/dev/rtc" in devices else []))
@@ -28,21 +21,6 @@ class RTCCapability:
             if self.adapter._path_exists(candidate):
                 return candidate
         return None
-
-    def _interface_candidates(self, name: str) -> list[str]:
-        value = self.board_profile.get("interfaces", {}).get(name, [])
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, str)]
-        if isinstance(value, dict):
-            candidates = value.get("items")
-            if candidates is None:
-                candidates = value.get("candidates", [])
-            primary = value.get("primary")
-            items = [item for item in candidates if isinstance(item, str)]
-            if isinstance(primary, str) and primary not in items:
-                return [primary, *items]
-            return items
-        return []
 
     def read_time(self, device: str | None = None) -> dict[str, Any]:
         rtc_device = device or self.resolve_primary()
@@ -78,11 +56,12 @@ class RTCCapability:
             if self.adapter._path_exists(candidate):
                 raw = self.adapter._read_text(candidate).strip().split(".")[0]
                 epoch = int(raw)
+                parsed = datetime.fromtimestamp(epoch, tz=timezone.utc)
                 return {
                     "success": True,
                     "device": rtc_device,
-                    "datetime": datetime.fromtimestamp(epoch, tz=timezone.utc),
-                    "time_iso": datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat(),
+                    "datetime": parsed,
+                    "time_iso": parsed.isoformat(),
                     "source": "sysfs",
                     "raw": raw,
                     "message": f"rtc read ok on {rtc_device}",
@@ -96,6 +75,21 @@ class RTCCapability:
             "error_type": "read_failed",
             "message": result.stderr.strip() or "unable to read rtc time",
         }
+
+    def _interface_candidates(self, name: str) -> list[str]:
+        value = self.board_profile.get("interfaces", {}).get(name, [])
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, str)]
+        if isinstance(value, dict):
+            candidates = value.get("items")
+            if candidates is None:
+                candidates = value.get("candidates", [])
+            primary = value.get("primary")
+            items = [item for item in candidates if isinstance(item, str)]
+            if isinstance(primary, str) and primary not in items:
+                return [primary, *items]
+            return items
+        return []
 
     def _parse_hwclock_output(self, output: str) -> datetime | None:
         first_line = output.strip().splitlines()[0] if output.strip() else ""

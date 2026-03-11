@@ -180,11 +180,13 @@ def test_run_function_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path
 def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Path, monkeypatch, capsys) -> None:
     from datetime import datetime, timezone
 
-    from framework.platform.capabilities.gpio import GPIOCapability
-    from framework.platform.capabilities.i2c import I2CCapability
-    from framework.platform.capabilities.network import NetworkCapability
-    from framework.platform.capabilities.rtc import RTCCapability
-    from framework.platform.capabilities.serial import SerialCapability
+    from framework.platform.capabilities import (
+        GPIOCapability,
+        I2CCapability,
+        NetworkCapability,
+        RTCCapability,
+        SerialCapability,
+    )
 
     def fake_ping(self, target_ip, *, interface=None, count=1, timeout=5):
         return {
@@ -307,7 +309,7 @@ def test_run_case_cli_executes_case_request(tmp_path: Path, capsys) -> None:
 
 
 def test_run_case_cli_auto_discovers_real_eth_function(tmp_path: Path, monkeypatch, capsys) -> None:
-    from framework.platform.capabilities.network import NetworkCapability
+    from framework.platform.capabilities import NetworkCapability
 
     def fake_ping(self, target_ip, *, interface=None, count=1, timeout=5):
         return {
@@ -349,7 +351,7 @@ def test_run_case_cli_auto_discovers_real_eth_function(tmp_path: Path, monkeypat
 def test_run_case_cli_auto_discovers_real_rtc_function(tmp_path: Path, monkeypatch, capsys) -> None:
     from datetime import datetime, timezone
 
-    from framework.platform.capabilities.rtc import RTCCapability
+    from framework.platform.capabilities import RTCCapability
 
     def fake_read_time(self, device=None):
         return {
@@ -384,7 +386,7 @@ def test_run_case_cli_auto_discovers_real_rtc_function(tmp_path: Path, monkeypat
 
 
 def test_run_case_cli_auto_discovers_real_gpio_function(tmp_path: Path, monkeypatch, capsys) -> None:
-    from framework.platform.capabilities.gpio import GPIOCapability
+    from framework.platform.capabilities import GPIOCapability
 
     def fake_describe_pin(self, physical_pin):
         return {
@@ -420,7 +422,7 @@ def test_run_case_cli_auto_discovers_real_gpio_function(tmp_path: Path, monkeypa
 
 
 def test_run_case_cli_auto_discovers_real_i2c_function(tmp_path: Path, monkeypatch, capsys) -> None:
-    from framework.platform.capabilities.i2c import I2CCapability
+    from framework.platform.capabilities import I2CCapability
 
     def fake_scan_buses(self, buses=None):
         bus_list = buses or ["/dev/i2c-0", "/dev/i2c-2"]

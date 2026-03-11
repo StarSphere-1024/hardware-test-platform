@@ -1,17 +1,35 @@
-"""Capability providers for the platform layer."""
+"""Capability contracts and public exports for the platform layer."""
 
-from .gpio import GPIOCapability
-from .i2c import I2CCapability
-from .network import NetworkCapability
-from .rtc import RTCCapability
-from .serial import SerialCapability
-from .system_info import SystemInfoCapability
+from .base import (
+    CapabilityBase,
+    GPIOCapabilityContract,
+    I2CCapabilityContract,
+    NetworkCapabilityContract,
+    RTCCapabilityContract,
+    SerialCapabilityContract,
+    SystemInfoCapabilityContract,
+)
+from .linux import (
+    LinuxGPIOCapability as GPIOCapability,
+    LinuxI2CCapability as I2CCapability,
+    LinuxNetworkCapability as NetworkCapability,
+    LinuxRTCCapability as RTCCapability,
+    LinuxSerialCapability as SerialCapability,
+    LinuxSystemInfoCapability as SystemInfoCapability,
+)
 
 __all__ = [
+    "CapabilityBase",
+    "GPIOCapabilityContract",
     "GPIOCapability",
+    "I2CCapabilityContract",
     "I2CCapability",
+    "NetworkCapabilityContract",
     "NetworkCapability",
+    "RTCCapabilityContract",
     "RTCCapability",
+    "SerialCapabilityContract",
     "SerialCapability",
+    "SystemInfoCapabilityContract",
     "SystemInfoCapability",
 ]

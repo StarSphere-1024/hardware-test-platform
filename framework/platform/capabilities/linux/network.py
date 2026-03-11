@@ -1,20 +1,14 @@
-"""Linux network capability."""
+"""Linux network capability implementation."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
 
-from ..adapters.base import PlatformAdapter
+from ..base import NetworkCapabilityContract
 
 
-class NetworkCapability:
-    name = "network"
-
-    def __init__(self, adapter: PlatformAdapter, board_profile: dict[str, Any] | None = None) -> None:
-        self.adapter = adapter
-        self.board_profile = dict(board_profile or {})
-
+class LinuxNetworkCapability(NetworkCapabilityContract):
     def list_interfaces(self, *, include_loopback: bool = False) -> list[str]:
         interfaces = [path.rsplit("/", 1)[-1] for path in self.adapter._list_paths("/sys/class/net/*")]
         if include_loopback:
@@ -28,21 +22,6 @@ class NetworkCapability:
             if candidate in available:
                 return candidate
         return None
-
-    def _interface_candidates(self, name: str) -> list[str]:
-        value = self.board_profile.get("interfaces", {}).get(name, [])
-        if isinstance(value, list):
-            return [item for item in value if isinstance(item, str)]
-        if isinstance(value, dict):
-            candidates = value.get("items")
-            if candidates is None:
-                candidates = value.get("candidates", [])
-            primary = value.get("primary")
-            items = [item for item in candidates if isinstance(item, str)]
-            if isinstance(primary, str) and primary not in items:
-                return [primary, *items]
-            return items
-        return []
 
     def ping(self, target_ip: str, *, interface: str | None = None, count: int = 1, timeout: int = 5) -> dict[str, Any]:
         command = ["ping", "-c", str(count), "-W", str(timeout)]
@@ -71,6 +50,21 @@ class NetworkCapability:
             ),
             "duration_ms": result.duration_ms,
         }
+
+    def _interface_candidates(self, name: str) -> list[str]:
+        value = self.board_profile.get("interfaces", {}).get(name, [])
+        if isinstance(value, list):
+            return [item for item in value if isinstance(item, str)]
+        if isinstance(value, dict):
+            candidates = value.get("items")
+            if candidates is None:
+                candidates = value.get("candidates", [])
+            primary = value.get("primary")
+            items = [item for item in candidates if isinstance(item, str)]
+            if isinstance(primary, str) and primary not in items:
+                return [primary, *items]
+            return items
+        return []
 
     def _parse_packet_loss(self, output: str) -> float:
         match = re.search(r"([\d.]+)%\s+packet loss", output)

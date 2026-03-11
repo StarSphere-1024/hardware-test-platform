@@ -16,11 +16,13 @@ def _write_json(path: Path, payload: dict) -> None:
 
 
 def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = True) -> None:
-    from framework.platform.capabilities.gpio import GPIOCapability
-    from framework.platform.capabilities.i2c import I2CCapability
-    from framework.platform.capabilities.network import NetworkCapability
-    from framework.platform.capabilities.rtc import RTCCapability
-    from framework.platform.capabilities.serial import SerialCapability
+    from framework.platform.capabilities import (
+        GPIOCapability,
+        I2CCapability,
+        NetworkCapability,
+        RTCCapability,
+        SerialCapability,
+    )
 
     def fake_ping(self, target_ip, *, interface=None, count=1, timeout=5):
         return {

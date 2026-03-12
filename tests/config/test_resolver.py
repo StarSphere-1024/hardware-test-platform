@@ -32,12 +32,49 @@ def test_fixture_resolution_builds_resolved_execution_config() -> None:
     assert resolved.resolved_interfaces["i2c"]["bound"] == "/dev/i2c-0"
     assert len(resolved.cases) == 4
     assert resolved.cases[0].functions[0].params["interface"] == "eno1"
+    assert resolved.cases[0].functions[0].resources == ["interface:eth:eno1"]
     assert resolved.cases[1].functions[0].params["port"] == "/dev/ttyUSB0"
+    assert resolved.cases[1].functions[0].resources == ["interface:uart:/dev/ttyUSB0"]
     assert resolved.cases[2].functions[0].params["rtc_device"] == "/dev/rtc0"
     assert resolved.cases[3].functions[0].params["bus"] == "/dev/i2c-0"
+    assert resolved.cases[3].functions[0].resources == ["interface:i2c:/dev/i2c-0"]
     assert resolved.resolved_runtime["timeout"] == 300
+    assert resolved.resolved_runtime["resource_lock_quarantine_seconds"] == 5
     assert resolved.config_sources["runtime"]["timeout"]["source"] == "fixture"
+    assert resolved.config_sources["runtime"]["resource_lock_quarantine_seconds"]["source"] == "global"
     assert resolved.config_sources["case_runtime"]["uart_case"]["functions"]["test_uart_loopback#0"]["timeout"]["source"] == "function"
+
+
+def test_case_resources_are_inherited_and_function_resources_can_override(tmp_path: Path) -> None:
+    case_path = tmp_path / "resource_case.json"
+    case_path.write_text(
+        json.dumps(
+            {
+                "case_name": "uart_case",
+                "module": "uart",
+                "board_profile": "linux_host_pc",
+                "resources": ["group:serial:shared"],
+                "resource_lock_quarantine_seconds": 2.5,
+                "functions": [
+                    {"name": "test_inherit_resources"},
+                    {
+                        "name": "test_override_resources",
+                        "resources": ["interface:uart:/dev/ttyUSB0"],
+                        "resource_lock_quarantine_seconds": 0.75,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    resolved = ConfigResolver(REPO_ROOT).resolve_case(case_path)
+
+    assert resolved.cases[0].resources == ["group:serial:shared"]
+    assert resolved.cases[0].functions[0].resources == ["group:serial:shared"]
+    assert resolved.cases[0].functions[0].resource_lock_quarantine_seconds == 2.5
+    assert resolved.cases[0].functions[1].resources == ["interface:uart:/dev/ttyUSB0"]
+    assert resolved.cases[0].functions[1].resource_lock_quarantine_seconds == 0.75
 
 
 def test_fixture_board_profile_overrides_global_default() -> None:
@@ -50,6 +87,17 @@ def test_fixture_board_profile_overrides_global_default() -> None:
     assert resolved.board_profile.profile_name == "rk3576"
     assert resolved.board_profile.product.sku == "RK3576_EVB"
     assert resolved.board_profile.product.stage == "DVT"
+
+
+def test_parallel_fixture_resolution_preserves_parallel_runtime() -> None:
+    resolver = ConfigResolver(REPO_ROOT)
+
+    resolved = resolver.resolve_fixture("fixtures/linux_host_pc_parallel.json")
+
+    assert resolved.fixture is not None
+    assert resolved.fixture.fixture_name == "linux_host_pc_parallel"
+    assert resolved.resolved_runtime["execution"] == "parallel"
+    assert [case.case_name for case in resolved.cases] == ["eth_case", "uart_case"]
 
 
 def test_case_board_profile_overrides_global_default() -> None:
@@ -107,13 +155,16 @@ def test_cli_override_wins_for_runtime_fields() -> None:
 
     resolved = resolver.resolve_fixture(
         "fixtures/linux_host_pc.json",
-        cli_overrides={"timeout": 120, "report_enabled": False},
+        cli_overrides={"timeout": 120, "report_enabled": False, "resource_lock_quarantine_seconds": 1.5},
     )
 
     assert resolved.resolved_runtime["timeout"] == 120
     assert resolved.resolved_runtime["report_enabled"] is False
+    assert resolved.resolved_runtime["resource_lock_quarantine_seconds"] == 1.5
     assert resolved.config_sources["runtime"]["timeout"]["source"] == "cli"
+    assert resolved.config_sources["runtime"]["resource_lock_quarantine_seconds"]["source"] == "cli"
     assert resolved.cases[0].functions[0].timeout == 120
+    assert resolved.cases[0].functions[0].resource_lock_quarantine_seconds == 1.5
 
 
 def test_invalid_override_is_rejected() -> None:

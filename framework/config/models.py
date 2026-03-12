@@ -64,6 +64,7 @@ class RuntimeDefaults(SerializableModel):
     default_timeout: int = 60
     default_retry: int = 0
     default_retry_interval: int = 0
+    default_resource_lock_quarantine_seconds: float = 5.0
 
 
 @dataclass(slots=True)
@@ -131,7 +132,9 @@ class FunctionInvocationSpec(SerializableModel):
     timeout: int | None = None
     retry: int | None = None
     retry_interval: int | None = None
+    resource_lock_quarantine_seconds: float | None = None
     required_capabilities: list[str] = field(default_factory=list)
+    resources: list[str] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
 
     @classmethod
@@ -144,7 +147,9 @@ class FunctionInvocationSpec(SerializableModel):
             timeout=data.get("timeout"),
             retry=data.get("retry"),
             retry_interval=data.get("retry_interval"),
+            resource_lock_quarantine_seconds=data.get("resource_lock_quarantine_seconds"),
             required_capabilities=list(data.get("required_capabilities", [])),
+            resources=list(data.get("resources", [])),
             tags=list(data.get("tags", [])),
         )
 
@@ -160,8 +165,10 @@ class CaseSpec(SerializableModel):
     timeout: int | None = None
     retry: int | None = None
     retry_interval: int | None = None
+    resource_lock_quarantine_seconds: float | None = None
     stop_on_failure: bool | None = None
     required_interfaces: dict[str, Any] = field(default_factory=dict)
+    resources: list[str] = field(default_factory=list)
     precheck: bool = True
 
     @classmethod
@@ -176,8 +183,10 @@ class CaseSpec(SerializableModel):
             timeout=data.get("timeout"),
             retry=data.get("retry"),
             retry_interval=data.get("retry_interval"),
+            resource_lock_quarantine_seconds=data.get("resource_lock_quarantine_seconds"),
             stop_on_failure=data.get("stop_on_failure"),
             required_interfaces=dict(data.get("required_interfaces", {})),
+            resources=list(data.get("resources", [])),
             precheck=data.get("precheck", True),
         )
 
@@ -192,6 +201,7 @@ class FixtureSpec(SerializableModel):
     timeout: int | None = None
     retry: int | None = None
     retry_interval: int | None = None
+    resource_lock_quarantine_seconds: float | None = None
     stop_on_failure: bool = False
     loop: bool = False
     loop_count: int | None = None
@@ -210,6 +220,7 @@ class FixtureSpec(SerializableModel):
             timeout=data.get("timeout"),
             retry=data.get("retry"),
             retry_interval=data.get("retry_interval"),
+            resource_lock_quarantine_seconds=data.get("resource_lock_quarantine_seconds"),
             stop_on_failure=data.get("stop_on_failure", False),
             loop=data.get("loop", False),
             loop_count=data.get("loop_count"),

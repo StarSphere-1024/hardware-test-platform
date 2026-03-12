@@ -26,6 +26,8 @@ class CaseRunner:
             payload={
                 "case": case_spec.to_dict(),
                 "required_interfaces": dict(case_spec.required_interfaces),
+                "resources": list(case_spec.resources),
+                "resource_lock_quarantine_seconds": case_spec.resource_lock_quarantine_seconds,
                 "precheck": case_spec.precheck,
             },
         )
@@ -35,13 +37,14 @@ class CaseRunner:
         for function_index, function_spec in enumerate(case_spec.functions):
             if not function_spec.enabled:
                 continue
+            dependency_task_id = previous_task_id if case_spec.execution == "sequential" else None
             function_tasks.append(
                 self._build_function_task(
                     function_spec,
                     case_name=case_spec.case_name,
                     parent_task_id=case_task_id,
                     task_index=function_index,
-                    previous_task_id=previous_task_id,
+                    previous_task_id=dependency_task_id,
                 )
             )
             previous_task_id = function_tasks[-1].task_id
@@ -75,6 +78,8 @@ class CaseRunner:
                 "params": dict(function_spec.params),
                 "expect": dict(function_spec.expect or {}),
                 "required_capabilities": list(function_spec.required_capabilities),
+                "resources": list(function_spec.resources),
+                "resource_lock_quarantine_seconds": function_spec.resource_lock_quarantine_seconds,
                 "tags": list(function_spec.tags),
             },
         )

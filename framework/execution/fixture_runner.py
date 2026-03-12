@@ -45,6 +45,16 @@ class FixtureRunner:
             tasks.append(case_task)
             tasks.extend(function_tasks)
 
+        plan_resources = sorted(
+            {
+                resource
+                for task in tasks
+                if task.task_type == "function"
+                for resource in task.payload.get("resources", [])
+                if isinstance(resource, str) and resource
+            }
+        )
+
         return ExecutionPlan(
             plan_id=f"plan.{fixture_name}",
             root_task=root_task,
@@ -54,5 +64,8 @@ class FixtureRunner:
                 "stop_on_failure": root_task.stop_on_failure,
                 "timeout": root_task.timeout,
             },
-            resource_requirements={"capabilities": list(resolved_config.capability_requirements)},
+            resource_requirements={
+                "capabilities": list(resolved_config.capability_requirements),
+                "resources": plan_resources,
+            },
         )

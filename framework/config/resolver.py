@@ -18,6 +18,7 @@ _ALLOWED_OVERRIDES = {
     "loop_count",
     "loop_interval",
     "report_enabled",
+    "resource_lock_quarantine_seconds",
     "retry",
     "retry_interval",
     "sn_required",
@@ -219,6 +220,11 @@ class ConfigResolver:
                 ("fixture", fixture.retry_interval),
                 ("cli", overrides.get("retry_interval")),
             ],
+            "resource_lock_quarantine_seconds": [
+                ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
+                ("fixture", fixture.resource_lock_quarantine_seconds),
+                ("cli", overrides.get("resource_lock_quarantine_seconds")),
+            ],
             "stop_on_failure": [("default", False), ("fixture", fixture.stop_on_failure), ("cli", overrides.get("stop_on_failure"))],
             "loop": [("default", False), ("fixture", fixture.loop), ("cli", overrides.get("loop"))],
             "loop_count": [("default", None), ("fixture", fixture.loop_count), ("cli", overrides.get("loop_count"))],
@@ -258,6 +264,11 @@ class ConfigResolver:
                 ("global", global_config.runtime.default_retry_interval),
                 ("case", case_spec.retry_interval),
                 ("cli", overrides.get("retry_interval")),
+            ],
+            "resource_lock_quarantine_seconds": [
+                ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
+                ("case", case_spec.resource_lock_quarantine_seconds),
+                ("cli", overrides.get("resource_lock_quarantine_seconds")),
             ],
             "stop_on_failure": [("default", False), ("case", case_spec.stop_on_failure), ("cli", overrides.get("stop_on_failure"))],
         }
@@ -302,11 +313,24 @@ class ConfigResolver:
                     ("cli", overrides.get("retry_interval")),
                 ]
             )
+            case_resource_lock_quarantine_seconds, case_resource_lock_quarantine_source = self._choose_value(
+                [
+                    ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
+                    ("fixture", fixture.resource_lock_quarantine_seconds if fixture else None),
+                    ("case", case_spec.resource_lock_quarantine_seconds),
+                    ("cli", overrides.get("resource_lock_quarantine_seconds")),
+                ]
+            )
             case_execution, case_execution_source = self._choose_value(
                 [("default", "sequential"), ("fixture", fixture.execution if fixture else None), ("case", case_spec.execution), ("cli", overrides.get("execution"))]
             )
             case_stop_on_failure, case_stop_on_failure_source = self._choose_value(
                 [("default", False), ("fixture", fixture.stop_on_failure if fixture else None), ("case", case_spec.stop_on_failure), ("cli", overrides.get("stop_on_failure"))]
+            )
+            case_resources, case_resources_template_sources = self._resolve_templates(
+                list(case_spec.resources),
+                context,
+                field_path=f"cases.{case_spec.case_name}.resources",
             )
 
             for index, function in enumerate(case_spec.functions):
@@ -337,10 +361,31 @@ class ConfigResolver:
                         ("cli", overrides.get("retry_interval")),
                     ]
                 )
+                resource_lock_quarantine_seconds, resource_lock_quarantine_source = self._choose_value(
+                    [
+                        ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
+                        ("fixture", fixture.resource_lock_quarantine_seconds if fixture else None),
+                        ("case", case_spec.resource_lock_quarantine_seconds),
+                        ("function", function.resource_lock_quarantine_seconds),
+                        ("cli", overrides.get("resource_lock_quarantine_seconds")),
+                    ]
+                )
                 params, template_sources = self._resolve_templates(
                     function.params,
                     context,
                     field_path=f"cases.{case_spec.case_name}.functions[{index}].params",
+                )
+                function_resources, function_resource_template_sources = self._resolve_templates(
+                    list(function.resources),
+                    context,
+                    field_path=f"cases.{case_spec.case_name}.functions[{index}].resources",
+                )
+                effective_resources, resource_source = self._resolve_function_resources(
+                    case_spec=case_spec,
+                    case_resources=case_resources,
+                    function=function,
+                    function_resources=function_resources,
+                    resolved_interfaces=context.get("resolved", {}).get("interfaces", {}),
                 )
                 functions.append(
                     FunctionInvocationSpec(
@@ -351,7 +396,9 @@ class ConfigResolver:
                         timeout=timeout,
                         retry=retry,
                         retry_interval=retry_interval,
+                        resource_lock_quarantine_seconds=resource_lock_quarantine_seconds,
                         required_capabilities=list(function.required_capabilities),
+                        resources=effective_resources,
                         tags=list(function.tags),
                     )
                 )
@@ -359,7 +406,10 @@ class ConfigResolver:
                     "timeout": timeout_source,
                     "retry": retry_source,
                     "retry_interval": retry_interval_source,
+                    "resource_lock_quarantine_seconds": resource_lock_quarantine_source,
                     "templates": template_sources,
+                    "resource_templates": function_resource_template_sources,
+                    "resources": {"source": resource_source, "value": copy.deepcopy(effective_resources)},
                 }
 
             resolved_cases.append(
@@ -373,8 +423,10 @@ class ConfigResolver:
                     timeout=case_timeout,
                     retry=case_retry,
                     retry_interval=case_retry_interval,
+                    resource_lock_quarantine_seconds=case_resource_lock_quarantine_seconds,
                     stop_on_failure=case_stop_on_failure,
                     required_interfaces=copy.deepcopy(case_spec.required_interfaces),
+                    resources=list(case_resources),
                     precheck=case_spec.precheck,
                 )
             )
@@ -383,10 +435,60 @@ class ConfigResolver:
                 "timeout": case_timeout_source,
                 "retry": case_retry_source,
                 "retry_interval": case_retry_interval_source,
+                "resource_lock_quarantine_seconds": case_resource_lock_quarantine_source,
                 "stop_on_failure": case_stop_on_failure_source,
+                "resource_templates": case_resources_template_sources,
+                "resources": {"source": "case" if case_resources else "derived", "value": copy.deepcopy(case_resources)},
                 "functions": function_trace,
             }
         return resolved_cases, trace
+
+    def _resolve_function_resources(
+        self,
+        *,
+        case_spec: CaseSpec,
+        case_resources: list[str],
+        function: FunctionInvocationSpec,
+        function_resources: list[str],
+        resolved_interfaces: dict[str, Any],
+    ) -> tuple[list[str], str]:
+        if function_resources:
+            return self._dedupe_strings(function_resources), "function"
+        if case_resources:
+            return self._dedupe_strings(case_resources), "case"
+        return self._derive_resources(case_spec=case_spec, function=function, resolved_interfaces=resolved_interfaces), "derived"
+
+    def _derive_resources(
+        self,
+        *,
+        case_spec: CaseSpec,
+        function: FunctionInvocationSpec,
+        resolved_interfaces: dict[str, Any],
+    ) -> list[str]:
+        resources: list[str] = []
+        for interface_name in case_spec.required_interfaces:
+            resolved_interface = resolved_interfaces.get(interface_name, {})
+            bound = resolved_interface.get("bound")
+            if isinstance(bound, str) and bound:
+                resources.append(f"interface:{interface_name}:{bound}")
+            else:
+                resources.append(f"interface:{interface_name}")
+        for capability_name in function.required_capabilities:
+            resources.append(f"capability:{capability_name}")
+        return self._dedupe_strings(resources)
+
+    def _dedupe_strings(self, values: list[Any]) -> list[str]:
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for value in values:
+            if not isinstance(value, str):
+                continue
+            normalized = value.strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            ordered.append(normalized)
+        return ordered
 
     def _resolve_templates(self, value: Any, context: dict[str, Any], *, field_path: str) -> tuple[Any, dict[str, str]]:
         if isinstance(value, dict):

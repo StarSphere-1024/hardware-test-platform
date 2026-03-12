@@ -134,6 +134,12 @@ def create_base_parser(description: str, *, include_board_profile: bool = False)
     parser.add_argument("--timeout", type=int, default=None, help="override timeout seconds")
     parser.add_argument("--retry", type=int, default=None, help="override retry count")
     parser.add_argument("--retry-interval", type=int, default=None, help="override retry interval seconds")
+    parser.add_argument(
+        "--resource-lock-quarantine-seconds",
+        type=float,
+        default=None,
+        help="override resource quarantine duration after timeout",
+    )
     parser.add_argument("--execution", choices=["sequential", "parallel"], default=None, help="override execution mode")
     parser.add_argument("--stop-on-failure", action="store_true", help="stop on first failure")
     parser.add_argument("--report-enabled", dest="report_enabled", action="store_true", default=None, help="force report generation")
@@ -147,7 +153,7 @@ def create_base_parser(description: str, *, include_board_profile: bool = False)
 
 def cli_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
     overrides: dict[str, Any] = {}
-    for key in ("timeout", "retry", "retry_interval", "execution", "report_enabled"):
+    for key in ("timeout", "retry", "retry_interval", "resource_lock_quarantine_seconds", "execution", "report_enabled"):
         value = getattr(args, key)
         if value is not None:
             overrides[key] = value
@@ -207,6 +213,11 @@ def build_function_resolved_config(
     timeout = args.timeout if args.timeout is not None else global_config.runtime.default_timeout
     retry = args.retry if args.retry is not None else global_config.runtime.default_retry
     retry_interval = args.retry_interval if args.retry_interval is not None else global_config.runtime.default_retry_interval
+    resource_lock_quarantine_seconds = (
+        args.resource_lock_quarantine_seconds
+        if args.resource_lock_quarantine_seconds is not None
+        else global_config.runtime.default_resource_lock_quarantine_seconds
+    )
     report_enabled = args.report_enabled if args.report_enabled is not None else global_config.observability.report_enabled
 
     function_spec = FunctionInvocationSpec(
@@ -215,6 +226,7 @@ def build_function_resolved_config(
         timeout=timeout,
         retry=retry,
         retry_interval=retry_interval,
+        resource_lock_quarantine_seconds=resource_lock_quarantine_seconds,
     )
     case_spec = CaseSpec(
         case_name=f"{function_name}_case",
@@ -224,6 +236,7 @@ def build_function_resolved_config(
         timeout=timeout,
         retry=retry,
         retry_interval=retry_interval,
+        resource_lock_quarantine_seconds=resource_lock_quarantine_seconds,
         stop_on_failure=True,
         precheck=False,
     )
@@ -249,6 +262,7 @@ def build_function_resolved_config(
             "timeout": timeout,
             "retry": retry,
             "retry_interval": retry_interval,
+            "resource_lock_quarantine_seconds": resource_lock_quarantine_seconds,
             "stop_on_failure": True,
             "report_enabled": report_enabled,
         },
@@ -261,6 +275,10 @@ def build_function_resolved_config(
                 "timeout": {"source": "cli" if args.timeout is not None else "global", "value": timeout},
                 "retry": {"source": "cli" if args.retry is not None else "global", "value": retry},
                 "retry_interval": {"source": "cli" if args.retry_interval is not None else "global", "value": retry_interval},
+                "resource_lock_quarantine_seconds": {
+                    "source": "cli" if args.resource_lock_quarantine_seconds is not None else "global",
+                    "value": resource_lock_quarantine_seconds,
+                },
             },
         },
     )
@@ -278,7 +296,11 @@ def build_function_plan(resolved_config: ResolvedExecutionConfig, *, function_na
             max_retries=runtime.get("retry", 0),
             interval_seconds=runtime.get("retry_interval", 0),
         ),
-        payload={"function_name": function_name, "params": params},
+        payload={
+            "function_name": function_name,
+            "params": params,
+            "resource_lock_quarantine_seconds": runtime.get("resource_lock_quarantine_seconds"),
+        },
     )
     return ExecutionPlan(
         plan_id=f"plan.{function_name}",

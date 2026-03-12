@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import threading
+import time
 
 import pytest
 
@@ -147,6 +149,65 @@ def test_run_fixture_cli_accepts_config_relative_to_current_subdir_when_root_omi
 
     assert exit_code == 0
     assert payload["status"] == "passed"
+
+
+def test_run_fixture_cli_executes_parallel_fixture_asset(tmp_path: Path, capsys) -> None:
+    start_times: dict[str, float] = {}
+    start_lock = threading.Lock()
+    both_started = threading.Event()
+
+    def eth_runner(interface, target_ip):
+        with start_lock:
+            start_times["eth"] = time.perf_counter()
+            if len(start_times) == 2:
+                both_started.set()
+        both_started.wait(0.3)
+        time.sleep(0.05)
+        return {
+            "code": 0,
+            "message": f"ping {target_ip} via {interface}",
+            "details": {"success": True, "interface": interface, "target_ip": target_ip},
+        }
+
+    def uart_runner(port, baudrate, payload):
+        with start_lock:
+            start_times["uart"] = time.perf_counter()
+            if len(start_times) == 2:
+                both_started.set()
+        both_started.wait(0.3)
+        time.sleep(0.05)
+        return {
+            "code": 0,
+            "message": f"loopback ok on {port}",
+            "details": {"received": payload, "port": port},
+        }
+
+    started = time.perf_counter()
+    exit_code = run_fixture_main(
+        [
+            "--workspace-root",
+            str(REPO_ROOT),
+            "--artifacts-root",
+            str(tmp_path),
+            "--config",
+            "fixtures/linux_host_pc_parallel.json",
+        ],
+        function_registry={
+            "test_eth_ping": eth_runner,
+            "test_uart_loopback": uart_runner,
+        },
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    elapsed = time.perf_counter() - started
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+    assert payload["result"]["name"] == "linux_host_pc_parallel"
+    assert [case_result["name"] for case_result in payload["result"]["children"]] == ["eth_case", "uart_case"]
+    assert set(start_times) == {"eth", "uart"}
+    assert abs(start_times["eth"] - start_times["uart"]) < 0.1
+    assert elapsed < 0.2
 
 
 def test_run_function_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path, monkeypatch, capsys) -> None:

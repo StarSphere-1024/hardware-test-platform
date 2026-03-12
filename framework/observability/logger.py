@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -58,44 +59,47 @@ class ExecutionObserver:
         self.task_states: dict[str, str] = {}
         self.task_results: dict[str, ExecutionResult] = {}
         self.latest_snapshot: ResultSnapshot | None = None
+        self._lock = threading.RLock()
 
     @property
     def request_id(self) -> str:
         return str(self.resolved_config.request.get("request_id", self.resolved_config.request.get("kind", "request")))
 
     def on_plan_created(self, plan: ExecutionPlan) -> None:
-        self.plan_tasks = {task.task_id: task for task in plan.tasks}
-        self._append_event(
-            event_type=EventType.PLAN_CREATED,
-            status=EventStatus.INFO,
-            message="execution plan created",
-            payload={
-                "target_type": self.resolved_config.request.get("kind", "fixture"),
-                "target_name": self.resolved_config.request.get("fixture_path") or self.resolved_config.request.get("case_path"),
-                "selected_board_profile": self.resolved_config.board_profile.profile_name,
-                "resolved_case_count": len(self.resolved_config.cases),
-            },
-            plan_id=plan.plan_id,
-        )
+        with self._lock:
+            self.plan_tasks = {task.task_id: task for task in plan.tasks}
+            self._append_event(
+                event_type=EventType.PLAN_CREATED,
+                status=EventStatus.INFO,
+                message="execution plan created",
+                payload={
+                    "target_type": self.resolved_config.request.get("kind", "fixture"),
+                    "target_name": self.resolved_config.request.get("fixture_path") or self.resolved_config.request.get("case_path"),
+                    "selected_board_profile": self.resolved_config.board_profile.profile_name,
+                    "resolved_case_count": len(self.resolved_config.cases),
+                },
+                plan_id=plan.plan_id,
+            )
 
     def on_task_started(self, task: ExecutionTask, *, plan_id: str, attempt: int | None = None, status_before: str | None = None) -> None:
-        self.task_states[task.task_id] = "running"
-        self._append_event(
-            event_type=EventType.TASK_STARTED,
-            status=EventStatus.INFO,
-            message=f"task started: {task.name}",
-            plan_id=plan_id,
-            task=task,
-            attempt=attempt,
-            status_before=status_before,
-            status_after="running",
-            payload={
-                "timeout": task.timeout,
-                "dependencies": list(task.dependencies),
-                "resolved_interfaces": self.resolved_config.resolved_interfaces,
-            },
-        )
-        self._write_snapshot(plan_id)
+        with self._lock:
+            self.task_states[task.task_id] = "running"
+            self._append_event(
+                event_type=EventType.TASK_STARTED,
+                status=EventStatus.INFO,
+                message=f"task started: {task.name}",
+                plan_id=plan_id,
+                task=task,
+                attempt=attempt,
+                status_before=status_before,
+                status_after="running",
+                payload={
+                    "timeout": task.timeout,
+                    "dependencies": list(task.dependencies),
+                    "resolved_interfaces": self.resolved_config.resolved_interfaces,
+                },
+            )
+            self._write_snapshot(plan_id)
 
     def on_task_retried(
         self,
@@ -107,69 +111,72 @@ class ExecutionObserver:
         retry_interval_seconds: int,
         last_result: ExecutionResult,
     ) -> None:
-        self.task_states[task.task_id] = "retrying"
-        self._append_event(
-            event_type=EventType.TASK_RETRIED,
-            status=EventStatus.WARNING,
-            message=f"task retrying: {task.name}",
-            plan_id=plan_id,
-            task=task,
-            attempt=current_attempt,
-            status_before=normalize_status(last_result.status),
-            status_after="retrying",
-            payload={
-                "current_attempt": current_attempt,
-                "next_attempt": next_attempt,
-                "retry_interval_seconds": retry_interval_seconds,
-                "last_error_message": last_result.message,
-            },
-        )
-        self._write_snapshot(plan_id)
+        with self._lock:
+            self.task_states[task.task_id] = "retrying"
+            self._append_event(
+                event_type=EventType.TASK_RETRIED,
+                status=EventStatus.WARNING,
+                message=f"task retrying: {task.name}",
+                plan_id=plan_id,
+                task=task,
+                attempt=current_attempt,
+                status_before=normalize_status(last_result.status),
+                status_after="retrying",
+                payload={
+                    "current_attempt": current_attempt,
+                    "next_attempt": next_attempt,
+                    "retry_interval_seconds": retry_interval_seconds,
+                    "last_error_message": last_result.message,
+                },
+            )
+            self._write_snapshot(plan_id)
 
     def on_task_finished(self, task: ExecutionTask, result: ExecutionResult, *, plan_id: str) -> None:
-        normalized = normalize_status(result.status)
-        self.task_states[task.task_id] = normalized
-        self.task_results[task.task_id] = result
-        status = EventStatus.SUCCESS if normalized == "passed" else EventStatus.ERROR if normalized in {"failed", "timeout", "aborted"} else EventStatus.INFO
-        self._append_event(
-            event_type=EventType.TASK_FINISHED,
-            status=status,
-            message=result.message or f"task finished: {task.name}",
-            plan_id=plan_id,
-            task=task,
-            attempt=(result.retry_count + 1) if task.task_type == "function" else None,
-            status_before="running",
-            status_after=normalized,
-            payload={
-                "code": result.code,
-                "duration_ms": result.duration_ms,
-                "summary": result.details.get("summary") if isinstance(result.details, dict) else None,
-            },
-        )
-        self._write_snapshot(plan_id, root_result=result if task.task_type == "fixture" else None)
+        with self._lock:
+            normalized = normalize_status(result.status)
+            self.task_states[task.task_id] = normalized
+            self.task_results[task.task_id] = result
+            status = EventStatus.SUCCESS if normalized == "passed" else EventStatus.ERROR if normalized in {"failed", "timeout", "aborted"} else EventStatus.INFO
+            self._append_event(
+                event_type=EventType.TASK_FINISHED,
+                status=status,
+                message=result.message or f"task finished: {task.name}",
+                plan_id=plan_id,
+                task=task,
+                attempt=(result.retry_count + 1) if task.task_type == "function" else None,
+                status_before="running",
+                status_after=normalized,
+                payload={
+                    "code": result.code,
+                    "duration_ms": result.duration_ms,
+                    "summary": result.details.get("summary") if isinstance(result.details, dict) else None,
+                },
+            )
+            self._write_snapshot(plan_id, root_result=result if task.task_type == "fixture" else None)
 
     def on_execution_finished(self, root_result: ExecutionResult, *, plan: ExecutionPlan, context: ExecutionContext) -> list[str]:
-        snapshot = self._write_snapshot(plan.plan_id, root_result=root_result, runtime_state=context.runtime_state)
-        events = self.event_store.read(self.request_id)
-        artifacts = self.report_generator.generate(
-            root_result=root_result,
-            snapshot=snapshot,
-            resolved_config=self.resolved_config,
-            events=events,
-        )
-        root_result.artifacts.extend(artifacts)
-        self._append_event(
-            event_type=EventType.REPORT_GENERATED,
-            status=EventStatus.SUCCESS,
-            message="report generated",
-            plan_id=plan.plan_id,
-            task=root_result_to_task(root_result),
-            status_before=normalize_status(root_result.status),
-            status_after=normalize_status(root_result.status),
-            payload={"artifacts": [artifact.to_dict() for artifact in artifacts]},
-        )
-        self._write_snapshot(plan.plan_id, root_result=root_result, runtime_state=context.runtime_state)
-        return [artifact.uri for artifact in artifacts]
+        with self._lock:
+            snapshot = self._write_snapshot(plan.plan_id, root_result=root_result, runtime_state=context.runtime_state)
+            events = self.event_store.read(self.request_id)
+            artifacts = self.report_generator.generate(
+                root_result=root_result,
+                snapshot=snapshot,
+                resolved_config=self.resolved_config,
+                events=events,
+            )
+            root_result.artifacts.extend(artifacts)
+            self._append_event(
+                event_type=EventType.REPORT_GENERATED,
+                status=EventStatus.SUCCESS,
+                message="report generated",
+                plan_id=plan.plan_id,
+                task=root_result_to_task(root_result),
+                status_before=normalize_status(root_result.status),
+                status_after=normalize_status(root_result.status),
+                payload={"artifacts": [artifact.to_dict() for artifact in artifacts]},
+            )
+            self._write_snapshot(plan.plan_id, root_result=root_result, runtime_state=context.runtime_state)
+            return [artifact.uri for artifact in artifacts]
 
     def _write_snapshot(
         self,

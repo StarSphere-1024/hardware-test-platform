@@ -55,6 +55,12 @@ def _optional_nullable_int(mapping: Mapping[str, Any], key: str, *, field_path: 
         raise SchemaValidationError("expected int or null", field_path=field_path, source=source)
 
 
+def _optional_number(mapping: Mapping[str, Any], key: str, *, field_path: str, source: str | None) -> None:
+    value = mapping.get(key)
+    if value is not None and (not isinstance(value, (int, float)) or isinstance(value, bool)):
+        raise SchemaValidationError("expected number", field_path=field_path, source=source)
+
+
 def _optional_list_of_strings(mapping: Mapping[str, Any], key: str, *, field_path: str, source: str | None) -> None:
     value = mapping.get(key)
     if value is None:
@@ -85,6 +91,12 @@ def validate_global_config_data(data: Any, *, source: str | None = None) -> None
         _optional_int(runtime_mapping, "default_timeout", field_path="runtime.default_timeout", source=source)
         _optional_int(runtime_mapping, "default_retry", field_path="runtime.default_retry", source=source)
         _optional_int(runtime_mapping, "default_retry_interval", field_path="runtime.default_retry_interval", source=source)
+        _optional_number(
+            runtime_mapping,
+            "default_resource_lock_quarantine_seconds",
+            field_path="runtime.default_resource_lock_quarantine_seconds",
+            source=source,
+        )
 
     observability = root.get("observability")
     if observability is not None:
@@ -154,8 +166,15 @@ def validate_case_data(data: Any, *, source: str | None = None) -> None:
 
     for key in ("timeout", "retry", "retry_interval"):
         _optional_int(root, key, field_path=key, source=source)
+    _optional_number(
+        root,
+        "resource_lock_quarantine_seconds",
+        field_path="resource_lock_quarantine_seconds",
+        source=source,
+    )
     for key in ("stop_on_failure", "precheck"):
         _optional_bool(root, key, field_path=key, source=source)
+    _optional_list_of_strings(root, "resources", field_path="resources", source=source)
 
     functions = _require_field(root, "functions", field_path="functions", source=source)
     if not isinstance(functions, list) or not functions:
@@ -167,6 +186,12 @@ def validate_case_data(data: Any, *, source: str | None = None) -> None:
         _optional_bool(function_mapping, "enabled", field_path=f"{item_path}.enabled", source=source)
         for key in ("timeout", "retry", "retry_interval"):
             _optional_int(function_mapping, key, field_path=f"{item_path}.{key}", source=source)
+        _optional_number(
+            function_mapping,
+            "resource_lock_quarantine_seconds",
+            field_path=f"{item_path}.resource_lock_quarantine_seconds",
+            source=source,
+        )
         for key in ("params", "expect"):
             value = function_mapping.get(key)
             if value is not None:
@@ -177,6 +202,7 @@ def validate_case_data(data: Any, *, source: str | None = None) -> None:
             field_path=f"{item_path}.required_capabilities",
             source=source,
         )
+        _optional_list_of_strings(function_mapping, "resources", field_path=f"{item_path}.resources", source=source)
         _optional_list_of_strings(function_mapping, "tags", field_path=f"{item_path}.tags", source=source)
 
     required_interfaces = root.get("required_interfaces")
@@ -197,6 +223,12 @@ def validate_fixture_data(data: Any, *, source: str | None = None) -> None:
 
     for key in ("timeout", "retry", "retry_interval", "loop_count", "loop_interval"):
         _optional_int(root, key, field_path=key, source=source)
+    _optional_number(
+        root,
+        "resource_lock_quarantine_seconds",
+        field_path="resource_lock_quarantine_seconds",
+        source=source,
+    )
     for key in ("stop_on_failure", "loop", "report_enabled", "sn_required"):
         _optional_bool(root, key, field_path=key, source=source)
 

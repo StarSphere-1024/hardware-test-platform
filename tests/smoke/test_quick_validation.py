@@ -102,13 +102,23 @@ def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = Tru
 
 
 def _run_quick_validation(tmp_path: Path, capsys, *, stop_on_failure: bool = False) -> tuple[int, dict[str, object]]:
+    return _run_fixture(tmp_path, capsys, config="fixtures/linux_host_pc.json", stop_on_failure=stop_on_failure)
+
+
+def _run_fixture(
+    tmp_path: Path,
+    capsys,
+    *,
+    config: str,
+    stop_on_failure: bool = False,
+) -> tuple[int, dict[str, object]]:
     argv = [
         "--workspace-root",
         str(REPO_ROOT),
         "--artifacts-root",
         str(tmp_path / "artifacts"),
         "--config",
-        "fixtures/linux_host_pc.json",
+        config,
     ]
     if stop_on_failure:
         argv.append("--stop-on-failure")
@@ -371,3 +381,31 @@ def test_fixture_precheck_failure_smoke(tmp_path: Path, capsys) -> None:
     assert report_payload["config_snapshot"]["fixture"]["fixture_name"] == "precheck_failure"
     assert report_payload["result_snapshot"]["current_status"] == "aborted"
     assert report_payload["root_result"]["children"][0]["details"]["missing_interfaces"] == ["eth"]
+
+
+def test_parallel_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> None:
+    _patch_quick_validation_capabilities(monkeypatch)
+
+    exit_code, payload = _run_fixture(
+        tmp_path,
+        capsys,
+        config="fixtures/linux_host_pc_parallel.json",
+    )
+    snapshot_path = Path(payload["snapshot_path"])
+    event_log_path = Path(payload["event_log_path"])
+
+    assert exit_code == 0
+    assert payload["status"] == "passed"
+    assert payload["result"]["name"] == "linux_host_pc_parallel"
+    assert [case_result["name"] for case_result in payload["result"]["children"]] == ["eth_case", "uart_case"]
+
+    snapshot_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
+    assert snapshot_payload["fixture"]["name"] == "linux_host_pc_parallel"
+    assert snapshot_payload["current_status"] == "passed"
+
+    event_lines = event_log_path.read_text(encoding="utf-8").splitlines()
+    events = [json.loads(line) for line in event_lines]
+    task_started = [entry for entry in events if entry["event"]["event_type"] == "task_started"]
+    case_started = [entry for entry in task_started if entry["event"]["task_type"] == "case"]
+    assert len(case_started) == 2
+    assert {entry["event"]["task_name"] for entry in case_started} == {"eth_case", "uart_case"}

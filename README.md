@@ -61,6 +61,11 @@ source venv/bin/activate
 python -m framework.cli.run_fixture --config fixtures/rk3576_smoke.json
 ```
 
+如果希望验证新引入的并行调度能力，可直接运行 Linux Host PC 的 parallel fixture：
+```bash
+python -m framework.cli.run_fixture --config fixtures/linux_host_pc_parallel.json
+```
+
 ** 带实时的交互监控运行（强烈推荐）：**
 只需在上述命令末尾追加 `--dashboard` 参数即可唤起 TUI dashboard，实时查看测试流及单项状态：
 ```bash

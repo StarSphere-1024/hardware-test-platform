@@ -9,7 +9,7 @@
     "cases/rk3576/i2c_case.json",
     "cases/rk3576/gpio_case.json"
   ],
-  "execution": "sequential",
+  "execution": "parallel",
   "stop_on_failure": false,
   "report_enabled": true,
   "timeout": 300,

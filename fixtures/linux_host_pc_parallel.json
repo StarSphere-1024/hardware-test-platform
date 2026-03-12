@@ -1,0 +1,14 @@
+{
+  "fixture_name": "linux_host_pc_parallel",
+  "description": "Parallel Linux host PC validation fixture for non-conflicting modules.",
+  "cases": [
+    "cases/linux_host_pc/eth_case.json",
+    "cases/linux_host_pc/uart_case.json"
+  ],
+  "execution": "parallel",
+  "stop_on_failure": false,
+  "report_enabled": true,
+  "timeout": 180,
+  "retry": 1,
+  "retry_interval": 1
+}

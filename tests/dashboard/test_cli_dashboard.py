@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+from rich.console import Console
 
 from framework.dashboard.cli_dashboard import CLIDashboard, DashboardDataSource
 
@@ -32,8 +34,22 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
             "current_status": "aborted",
             "fixture": {"name": "linux_host_pc", "status": "aborted"},
             "cases": [
-                {"name": "eth_case", "status": "failed", "message": "ping failed", "summary": {"failed": 1}},
-                {"name": "uart_case", "status": "aborted", "message": "aborted by stop_on_failure", "summary": {"aborted": 1}},
+                {
+                    "name": "eth_case",
+                    "status": "failed",
+                    "message": "ping failed",
+                    "summary": {"failed": 1},
+                    "started_at": datetime(2026, 3, 6, 11, 59, 30, tzinfo=timezone.utc).isoformat(),
+                    "duration_ms": 12000,
+                },
+                {
+                    "name": "uart_case",
+                    "status": "aborted",
+                    "message": "aborted by stop_on_failure",
+                    "summary": {"aborted": 1},
+                    "started_at": datetime(2026, 3, 6, 11, 59, 42, tzinfo=timezone.utc).isoformat(),
+                    "duration_ms": 0,
+                },
             ],
             "counters": {"failed": 1, "aborted": 1},
             "status_summary": {"failed": 1, "aborted": 1},
@@ -46,9 +62,22 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
         [
             {
                 "sequence": 1,
-                "stored_at": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc).isoformat(),
+                "stored_at": datetime(
+                    2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc
+                ).isoformat(),
                 "storage_metadata": {"source": "scheduler"},
-                "event": {"event_id": "evt-1", "request_id": request_id, "plan_id": "plan.linux_host_pc", "event_type": "task_retried", "timestamp": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc).isoformat(), "status": "warning", "task_name": "test_eth_ping", "message": "retrying"},
+                "event": {
+                    "event_id": "evt-1",
+                    "request_id": request_id,
+                    "plan_id": "plan.linux_host_pc",
+                    "event_type": "task_retried",
+                    "timestamp": datetime(
+                        2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc
+                    ).isoformat(),
+                    "status": "warning",
+                    "task_name": "test_eth_ping",
+                    "message": "retrying",
+                },
             }
         ],
     )
@@ -86,6 +115,90 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
     assert state["retry_count"] == 1
     assert state["sys_info"]["cpu"]["usage_percent"] == 23.0
     assert layout is not None
+
+
+def test_dashboard_module_table_shows_case_runtime(tmp_path: Path) -> None:
+    dashboard = CLIDashboard(workspace_root=REPO_ROOT, tmp_dir=tmp_path / "tmp", logs_dir=tmp_path / "logs", reports_dir=tmp_path / "reports")
+
+    panel = dashboard._create_module_table(
+        [
+            {
+                "name": "eth_case",
+                "status": "running",
+                "summary": {"running": 1},
+                "started_at": datetime.now(timezone.utc).isoformat(),
+            },
+            {
+                "name": "uart_case",
+                "status": "passed",
+                "summary": {"passed": 1},
+                "duration_ms": 65000,
+            },
+        ]
+    )
+    console = Console(record=True, force_terminal=False, width=120)
+    console.print(panel)
+    rendered = console.export_text(clear=False)
+
+    assert "Runtime" in rendered
+    assert "00:01:05" in rendered
+
+
+def test_dashboard_runtime_prefers_live_running_elapsed_over_stale_duration() -> None:
+    dashboard = CLIDashboard(workspace_root=REPO_ROOT)
+
+    runtime_text = dashboard._case_runtime_display(
+        {
+            "status": "running",
+            "started_at": datetime.now(timezone.utc).isoformat(),
+            "duration_ms": 0,
+        }
+    )
+
+    assert runtime_text == "0s"
+
+
+def test_dashboard_runtime_formats_short_durations_with_milliseconds() -> None:
+    dashboard = CLIDashboard(workspace_root=REPO_ROOT)
+
+    assert dashboard._format_completed_duration(345) == "345ms"
+    assert dashboard._format_completed_duration(1500) == "1.5s"
+
+
+def test_dashboard_running_runtime_is_quantized_to_whole_seconds() -> None:
+    dashboard = CLIDashboard(workspace_root=REPO_ROOT)
+
+    assert dashboard._format_running_duration(250) == "0s"
+    assert dashboard._format_running_duration(1250) == "1s"
+
+
+def test_dashboard_running_runtime_uses_monotonic_baseline(monkeypatch) -> None:
+    dashboard = CLIDashboard(workspace_root=REPO_ROOT)
+    started_at = datetime(2026, 3, 12, 10, 0, 0, tzinfo=timezone.utc)
+    case = {
+        "name": "eth_case",
+        "status": "running",
+        "started_at": started_at.isoformat(),
+        "duration_ms": 0,
+    }
+
+    class FakeDateTime(datetime):
+        current = started_at
+
+        @classmethod
+        def now(cls, tz=None):
+            value = cls.current
+            return value if tz is None else value.astimezone(tz)
+
+    monotonic_values = iter([100.0, 101.9])
+    monkeypatch.setattr("framework.dashboard.cli_dashboard.time.monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr("framework.dashboard.cli_dashboard.datetime", FakeDateTime)
+
+    FakeDateTime.current = started_at + timedelta(milliseconds=1200)
+    assert dashboard._case_runtime_display(case) == "1s"
+
+    FakeDateTime.current = started_at + timedelta(milliseconds=200)
+    assert dashboard._case_runtime_display(case) == "3s"
 
 
 def test_dashboard_data_source_selects_latest_snapshot_when_request_is_omitted(tmp_path: Path) -> None:

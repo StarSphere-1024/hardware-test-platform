@@ -210,17 +210,18 @@ class CLIDashboard:
         self._auto_exit = auto_exit
         self._success_exit_linger_seconds = success_exit_linger_seconds
         self._failure_exit_linger_seconds = failure_exit_linger_seconds
-        self._start_time: datetime | None = None
+        self._start_monotonic: float | None = None
         self._completed_at: datetime | None = None
         self._completed_status: str | None = None
         self._view_mode = "main"
         self._last_action = ""
         self._pending_snapshot = False
         self._fixture_config = self.data_source.load_fixture_config(fixture_name)
+        self._running_case_timers: dict[str, tuple[float, float]] = {}
 
     def start(self, *, start_monitor: bool = True) -> None:
         self._running = True
-        self._start_time = datetime.now()
+        self._start_monotonic = time.monotonic()
         if start_monitor:
             self._start_monitor()
         self._run_live_display()
@@ -433,13 +434,15 @@ class CLIDashboard:
         table = Table(show_header=True, header_style="bold")
         table.add_column("Case", style="cyan")
         table.add_column("Status", justify="center")
+        table.add_column("Runtime", justify="right", style="magenta")
         table.add_column("Summary", style="white")
         if not cases:
-            table.add_row("-", "[grey70]pending[/grey70]", "no snapshot data")
+            table.add_row("-", "[grey70]pending[/grey70]", "-", "no snapshot data")
         for case in cases:
             table.add_row(
                 str(case.get("name", "unknown")),
                 self._status_display(str(case.get("status", "unknown"))),
+                self._case_runtime_display(case),
                 self._compact_case(case),
             )
         return Panel(table, title="Case Status")
@@ -591,10 +594,72 @@ class CLIDashboard:
             return ", ".join(f"{key}={value}" for key, value in sorted(summary.items()))
         return str(case.get("message") or "-")
 
+    def _case_runtime_display(self, case: dict[str, Any]) -> str:
+        status = str(case.get("status") or "")
+        if status == "running":
+            return self._format_running_duration(self._running_duration_ms(case))
+
+        duration_ms = case.get("duration_ms")
+        if isinstance(duration_ms, (int, float)):
+            return self._format_completed_duration(float(duration_ms))
+        return "-"
+
+    def _running_duration_ms(self, case: dict[str, Any]) -> float | None:
+        started_at = self._parse_datetime(case.get("started_at"))
+        if started_at is None:
+            duration_ms = case.get("duration_ms")
+            if isinstance(duration_ms, (int, float)):
+                return max(float(duration_ms), 0.0)
+            return None
+
+        case_key = self._case_timer_key(case)
+        observed_elapsed_ms = max((datetime.now(started_at.tzinfo) - started_at).total_seconds() * 1000, 0.0)
+        current_monotonic = time.monotonic()
+        baseline = self._running_case_timers.get(case_key)
+        if baseline is None:
+            self._running_case_timers[case_key] = (observed_elapsed_ms, current_monotonic)
+            return observed_elapsed_ms
+
+        baseline_elapsed_ms, baseline_monotonic = baseline
+        return max(baseline_elapsed_ms + (current_monotonic - baseline_monotonic) * 1000, 0.0)
+
+    def _case_timer_key(self, case: dict[str, Any]) -> str:
+        name = str(case.get("name") or "unknown")
+        started_at = str(case.get("started_at") or "")
+        return f"{name}:{started_at}"
+
+    def _format_running_duration(self, duration_ms: float | None) -> str:
+        if duration_ms is None:
+            return "-"
+        return f"{int(duration_ms // 1000)}s"
+
+    def _format_completed_duration(self, duration_ms: float) -> str:
+        duration_ms = max(duration_ms, 0)
+        if duration_ms < 1000:
+            return f"{int(duration_ms)}ms"
+
+        total_seconds = int(duration_ms / 1000)
+        if total_seconds < 60:
+            return f"{duration_ms / 1000:.1f}s"
+
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+    def _parse_datetime(self, value: Any) -> datetime | None:
+        if isinstance(value, datetime):
+            return value
+        if not isinstance(value, str) or not value:
+            return None
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return None
+
     def _elapsed_str(self) -> str:
-        if self._start_time is None:
+        if self._start_monotonic is None:
             return "00:00:00"
-        total = int((datetime.now() - self._start_time).total_seconds())
+        total = int(max(time.monotonic() - self._start_monotonic, 0.0))
         hours, remainder = divmod(total, 3600)
         minutes, seconds = divmod(remainder, 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"

@@ -58,6 +58,7 @@ class ExecutionObserver:
         self.plan_tasks: dict[str, ExecutionTask] = {}
         self.task_states: dict[str, str] = {}
         self.task_results: dict[str, ExecutionResult] = {}
+        self.task_started_at: dict[str, datetime] = {}
         self.latest_snapshot: ResultSnapshot | None = None
         self._lock = threading.RLock()
 
@@ -84,6 +85,7 @@ class ExecutionObserver:
     def on_task_started(self, task: ExecutionTask, *, plan_id: str, attempt: int | None = None, status_before: str | None = None) -> None:
         with self._lock:
             self.task_states[task.task_id] = "running"
+            self.task_started_at.setdefault(task.task_id, datetime.now(timezone.utc))
             self._append_event(
                 event_type=EventType.TASK_STARTED,
                 status=EventStatus.INFO,
@@ -229,42 +231,51 @@ class ExecutionObserver:
                 case_result = self.task_results.get(task.task_id)
                 if case_result is not None:
                     cases.append(
-                        {
-                            "task_id": case_result.task_id,
-                            "name": case_result.name,
-                            "status": normalize_status(case_result.status),
-                            "message": case_result.message,
-                            "summary": summarize_children(case_result.children),
-                        }
+                        self._build_case_summary_from_result(case_result)
                     )
                     continue
 
                 child_statuses = self._collect_child_statuses(task.task_id)
                 inferred_status = self._infer_task_status(task.task_id, child_statuses)
-                cases.append(
-                    {
-                        "task_id": task.task_id,
-                        "name": task.name,
-                        "status": inferred_status,
-                        "message": self._infer_case_message(task.name, inferred_status, child_statuses),
-                        "summary": self._summarize_statuses(child_statuses),
-                    }
-                )
+                cases.append(self._build_case_summary_from_task(task, inferred_status, child_statuses))
             return cases
         cases: list[dict[str, Any]] = []
         for child in root_result.children:
             if child.task_type != "case":
                 continue
-            cases.append(
-                {
-                    "task_id": child.task_id,
-                    "name": child.name,
-                    "status": normalize_status(child.status),
-                    "message": child.message,
-                    "summary": summarize_children(child.children),
-                }
-            )
+            cases.append(self._build_case_summary_from_result(child))
         return cases
+
+    def _build_case_summary_from_result(self, case_result: ExecutionResult) -> dict[str, Any]:
+        return {
+            "task_id": case_result.task_id,
+            "name": case_result.name,
+            "status": normalize_status(case_result.status),
+            "message": case_result.message,
+            "summary": summarize_children(case_result.children),
+            "started_at": case_result.started_at,
+            "duration_ms": case_result.duration_ms,
+        }
+
+    def _build_case_summary_from_task(
+        self,
+        task: ExecutionTask,
+        inferred_status: str,
+        child_statuses: list[str],
+    ) -> dict[str, Any]:
+        started_at = self.task_started_at.get(task.task_id)
+        duration_ms = None
+        if started_at is not None and inferred_status == "running":
+            duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
+        return {
+            "task_id": task.task_id,
+            "name": task.name,
+            "status": inferred_status,
+            "message": self._infer_case_message(task.name, inferred_status, child_statuses),
+            "summary": self._summarize_statuses(child_statuses),
+            "started_at": started_at,
+            "duration_ms": duration_ms,
+        }
 
     def _collect_child_statuses(self, parent_task_id: str) -> list[str]:
         child_statuses: list[str] = []

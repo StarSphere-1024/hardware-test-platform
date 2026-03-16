@@ -69,4 +69,28 @@ class ReportGenerator:
             f"Root Result: {root_result.name} ({root_result.task_type}) -> {root_result.status}",
             f"Message: {root_result.message or ''}",
         ])
+        residual_risks = self._collect_residual_risks(root_result)
+        if residual_risks:
+            lines.extend(["", "Residual Risks:"])
+            for item in residual_risks:
+                lines.append(f"- {item['task_name']}: {item['message']}")
         return "\n".join(lines) + "\n"
+
+    def _collect_residual_risks(self, root_result: ExecutionResult) -> list[dict[str, str]]:
+        residual_risks: list[dict[str, str]] = []
+
+        def visit(result: ExecutionResult) -> None:
+            if isinstance(result.details, dict):
+                risk = result.details.get("residual_risk")
+                if isinstance(risk, dict):
+                    residual_risks.append(
+                        {
+                            "task_name": result.name,
+                            "message": str(risk.get("message") or "residual risk recorded"),
+                        }
+                    )
+            for child in result.children:
+                visit(child)
+
+        visit(root_result)
+        return residual_risks

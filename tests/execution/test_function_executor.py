@@ -49,6 +49,8 @@ def test_function_executor_returns_timeout_without_waiting_for_worker_completion
     assert result.status == ResultStatus.TIMEOUT
     assert result.code == 1
     assert elapsed < 0.2
+    assert result.details["residual_risk"]["kind"] == "timeout_background_execution_unknown"
+    assert "worker could be confirmed stopped" in result.details["residual_risk"]["message"]
 
 
 def test_function_executor_fails_when_expect_rules_are_not_met() -> None:

@@ -47,11 +47,27 @@ def test_scheduler_writes_events_snapshots_logs_and_reports(tmp_path: Path) -> N
     )
 
     registry = {
-        "test_eth_ping": lambda interface, target_ip: {"code": 0, "message": f"ping {target_ip} via {interface}", "details": {"interface": interface}},
-        "test_uart_loopback": lambda port, baudrate, payload: {"code": 0, "message": f"loopback ok on {port}", "details": {"payload": payload}},
-        "test_rtc_read": lambda rtc_device: {"code": 0, "message": f"rtc ok on {rtc_device}", "details": {"rtc_device": rtc_device}},
-        "test_gpio_mapping": lambda physical_pin: {"code": 0, "message": f"gpio ok on {physical_pin}", "details": {"physical_pin": physical_pin}},
-        "test_i2c_scan": lambda bus, scan_all: {"code": 0, "message": f"i2c ok on {bus}", "details": {"bus": bus, "scan_all": scan_all}},
+        "test_eth_ping": lambda interface, target_ip: {
+            "code": 0,
+            "message": f"ping {target_ip} via {interface}",
+            "details": {"interface": interface, "success": True},
+        },
+        "test_uart_loopback": lambda port, baudrate, payload: {
+            "code": 0,
+            "message": f"loopback ok on {port}",
+            "details": {"payload": payload, "received": payload},
+        },
+        "test_rtc_read": lambda rtc_device: {
+            "code": 0,
+            "message": f"rtc ok on {rtc_device}",
+            "details": {"rtc_device": rtc_device, "time": "2026-03-10T10:00:00+00:00"},
+        },
+        "test_i2c_scan": lambda bus, scan_all: {
+            "code": 0,
+            "message": f"i2c ok on {bus}",
+            "details": {"bus": bus, "scan_all": scan_all},
+            "metrics": {"bus_count": 1},
+        },
     }
     root_result = Scheduler(FunctionExecutor(registry)).run(plan, context)
 
@@ -119,3 +135,69 @@ def test_observer_writes_live_case_summaries_before_fixture_finishes(tmp_path: P
     assert snapshot_payload["cases"][0]["name"] == "eth_case"
     assert snapshot_payload["cases"][0]["status"] == "running"
     assert snapshot_payload["cases"][0]["summary"]["running"] == 1
+
+
+def test_observer_and_report_preserve_timeout_residual_risk(tmp_path: Path) -> None:
+    resolver = ConfigResolver(REPO_ROOT)
+    resolved = resolver.resolve_fixture(
+        "fixtures/linux_host_pc.json",
+        request={"kind": "fixture", "request_id": "req-obs-timeout-001", "fixture_path": "fixtures/linux_host_pc.json"},
+    )
+    resolved.cases = [resolved.cases[0]]
+    resolved.fixture.cases = ["cases/linux_host_pc/eth_case.json"]
+    resolved.cases[0].functions[0].timeout = 0
+    plan = FixtureRunner().build_plan(resolved)
+
+    result_store = ResultStore(tmp_path / "tmp")
+    event_store = EventStore(tmp_path / "logs" / "events")
+    report_generator = ReportGenerator(tmp_path / "reports")
+    logger = UnifiedLogger(tmp_path / "logs")
+    observer = ExecutionObserver(
+        resolved_config=resolved,
+        result_store=result_store,
+        event_store=event_store,
+        report_generator=report_generator,
+        logger=logger,
+    )
+    context = ExecutionContext(
+        request_id="req-obs-timeout-001",
+        plan_id=plan.plan_id,
+        resolved_config=resolved,
+        runtime_state={"observability": observer},
+        artifacts_dir=ArtifactDirectories(
+            logs_dir=tmp_path / "logs",
+            tmp_dir=tmp_path / "tmp",
+            reports_dir=tmp_path / "reports",
+        ),
+    )
+
+    def blocking_timeout(interface, target_ip):
+        return_value = {"interface": interface, "target_ip": target_ip}
+        import time
+
+        time.sleep(0.05)
+        return {"code": 0, "message": "unexpected success", "details": return_value}
+
+    root_result = Scheduler(FunctionExecutor({"test_eth_ping": blocking_timeout})).run(plan, context)
+
+    snapshot_payload = json.loads(result_store.snapshot_path("req-obs-timeout-001").read_text(encoding="utf-8"))
+    event_lines = event_store.event_log_path("req-obs-timeout-001").read_text(encoding="utf-8").splitlines()
+    events = [json.loads(line) for line in event_lines]
+    report_json = next(item for item in (tmp_path / "reports").glob("*.json"))
+    report_text = next(item for item in (tmp_path / "reports").glob("*.report"))
+    report_payload = json.loads(report_json.read_text(encoding="utf-8"))
+
+    function_result = root_result.children[0].children[0]
+    assert function_result.status == "timeout"
+    assert function_result.details["residual_risk"]["kind"] == "timeout_background_execution_unknown"
+    assert snapshot_payload["results"][0]["children"][0]["children"][0]["details"]["residual_risk"]["kind"] == "timeout_background_execution_unknown"
+
+    timeout_event = next(
+        entry["event"]
+        for entry in events
+        if entry["event"]["event_type"] == "task_finished" and entry["event"].get("task_name") == "test_eth_ping"
+    )
+    assert timeout_event["payload"]["residual_risk"]["kind"] == "timeout_background_execution_unknown"
+    assert report_payload["root_result"]["children"][0]["children"][0]["details"]["residual_risk"]["kind"] == "timeout_background_execution_unknown"
+    assert "Residual Risks:" in report_text.read_text(encoding="utf-8")
+    assert "test_eth_ping: timeout returned before the worker could be confirmed stopped" in report_text.read_text(encoding="utf-8")

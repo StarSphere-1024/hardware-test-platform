@@ -97,6 +97,14 @@ python -m framework.cli.run_function \
 - **`logs/`**：传统的纯文本执行日志。
 - **`reports/`**：最终按 `{sku}_{request_id}_{timestamp}_{status}` 格式生成的完整报表（含纯文本及 JSON 版本）。
 
+## 执行边界说明
+
+- `parallel` + `stop_on_failure` 当前只会阻止尚未提交的 pending 任务继续进入执行，不会主动取消已经提交的任务。
+- 已经进入运行中的任务，以及已经提交但正在等待资源锁的任务，仍会继续运行到自然结束、锁等待超时或函数超时。
+- function timeout 当前通过线程 `join(timeout)` 返回超时结果；这代表主流程已继续推进，但不保证后台 worker 已经终止。
+- 当 timeout 发生时，函数结果会记录 residual risk 提示，提示“超时后无法确认执行体已停止”；如函数具有串口、GPIO 或系统命令等副作用，建议在重试前先检查硬件状态。
+- 资源锁在 timeout 后可能进入 quarantine，后续任务更可能表现为锁等待 timeout，而不是 `aborted`。
+
 ## 核心架构与概念
 
 为了不侵入任何业务代码即实现配置调度与测试分离，请认准以下核心层级：

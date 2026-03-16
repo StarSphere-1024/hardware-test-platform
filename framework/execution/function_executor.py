@@ -63,7 +63,14 @@ class FunctionExecutor:
                 started_at=started_at,
                 finished_at=finished_at,
                 duration_ms=int((time.perf_counter() - started_perf) * 1000),
-                details={"params": dict(params)},
+                details={
+                    "params": dict(params),
+                    "residual_risk": {
+                        "kind": "timeout_background_execution_unknown",
+                        "message": "timeout returned before the worker could be confirmed stopped",
+                        "operator_action": "inspect hardware state before immediate retry if the function has side effects",
+                    },
+                },
             )
         except Exception as error:
             finished_at = datetime.now(timezone.utc)

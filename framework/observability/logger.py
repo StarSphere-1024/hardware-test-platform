@@ -138,6 +138,7 @@ class ExecutionObserver:
             normalized = normalize_status(result.status)
             self.task_states[task.task_id] = normalized
             self.task_results[task.task_id] = result
+            residual_risk = result.details.get("residual_risk") if isinstance(result.details, dict) else None
             status = EventStatus.SUCCESS if normalized == "passed" else EventStatus.ERROR if normalized in {"failed", "timeout", "aborted"} else EventStatus.INFO
             self._append_event(
                 event_type=EventType.TASK_FINISHED,
@@ -152,6 +153,7 @@ class ExecutionObserver:
                     "code": result.code,
                     "duration_ms": result.duration_ms,
                     "summary": result.details.get("summary") if isinstance(result.details, dict) else None,
+                    "residual_risk": residual_risk,
                 },
             )
             self._write_snapshot(plan_id, root_result=result if task.task_type == "fixture" else None)

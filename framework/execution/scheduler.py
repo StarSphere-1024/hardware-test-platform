@@ -247,6 +247,8 @@ class Scheduler:
 
                 if not in_flight:
                     if pending:
+                        if stop_submitting:
+                            break
                         unresolved = ", ".join(sorted(pending))
                         raise TaskExecutionError(f"parallel scheduling stalled, unresolved dependencies: {unresolved}")
                     break

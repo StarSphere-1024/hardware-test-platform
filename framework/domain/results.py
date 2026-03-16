@@ -13,6 +13,7 @@ from ._serialization import SerializableModel
 class ResultStatus(str, Enum):
     PASSED = "passed"
     FAILED = "failed"
+    RUNNING = "running"
     TIMEOUT = "timeout"
     SKIPPED = "skipped"
     ABORTED = "aborted"

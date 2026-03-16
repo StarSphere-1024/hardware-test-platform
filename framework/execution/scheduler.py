@@ -31,7 +31,6 @@ class Scheduler:
         if plan.root_task.execution_mode not in {"sequential", "parallel"}:
             raise UnsupportedExecutionModeError(f"unsupported root execution mode: {plan.root_task.execution_mode}")
 
-        task_index = {task.task_id: task for task in plan.tasks}
         children_by_parent: dict[str, list[ExecutionTask]] = defaultdict(list)
         for task in plan.tasks:
             if task.parent_task_id is not None:

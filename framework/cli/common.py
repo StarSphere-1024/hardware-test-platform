@@ -17,7 +17,6 @@ from framework.config.models import CaseSpec, FunctionInvocationSpec, ResolvedEx
 from framework.config.resolver import ConfigResolver
 from framework.domain.execution import ArtifactDirectories, ExecutionContext, ExecutionPlan, ExecutionTask, RetryPolicy
 from framework.domain.requests import ExecutionRequest
-from framework.execution.fixture_runner import FixtureRunner
 from framework.execution.function_executor import FunctionExecutor
 from framework.execution.scheduler import Scheduler
 from framework.observability import EventStore, ExecutionObserver, ReportGenerator, ResultStore, UnifiedLogger
@@ -82,7 +81,7 @@ def _root_matches_cli_paths(candidate: Path, args: argparse.Namespace) -> bool:
 def resolve_workspace_root(args: argparse.Namespace) -> Path:
     explicit_root = getattr(args, "workspace_root", None)
     if explicit_root not in (None, ""):
-        return Path(explicit_root).resolve()
+        return Path(str(explicit_root)).resolve()
 
     matched_workspaces: list[Path] = []
     for candidate in _iter_workspace_root_candidates(args):
@@ -351,10 +350,10 @@ def parse_json_params(raw: str | None) -> dict[str, Any]:
     if raw in (None, "", "null"):
         return {}
     try:
-        payload = json.loads(raw)
+        payload = json.loads(raw)  # type: ignore[arg-type]
     except json.JSONDecodeError as error:
         raise CLIError(f"invalid JSON params: {error.msg}", exit_code=2) from error
-    if not isinstance(payload, dict):
+    if payload is None or not isinstance(payload, dict):
         raise CLIError("--params must decode to an object", exit_code=2)
     return payload
 

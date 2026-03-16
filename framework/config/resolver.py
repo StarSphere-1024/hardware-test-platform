@@ -501,12 +501,12 @@ class ConfigResolver:
             return resolved, sources
         if isinstance(value, list):
             resolved_list: list[Any] = []
-            sources: dict[str, str] = {}
+            sources_list: dict[str, str] = {}
             for index, item in enumerate(value):
                 next_value, nested_sources = self._resolve_templates(item, context, field_path=f"{field_path}[{index}]")
                 resolved_list.append(next_value)
-                sources.update(nested_sources)
-            return resolved_list, sources
+                sources_list.update(nested_sources)
+            return resolved_list, sources_list
         if not isinstance(value, str):
             return value, {}
 
@@ -519,7 +519,7 @@ class ConfigResolver:
             return copy.deepcopy(self._lookup_context(token, context, field_path)), {field_path: token}
 
         result = value
-        sources: dict[str, str] = {}
+        sources_str: dict[str, str] = {}
         for match in matches:
             token = match.group(1).strip()
             replacement = self._lookup_context(token, context, field_path)
@@ -529,8 +529,8 @@ class ConfigResolver:
                     field_path=field_path,
                 )
             result = result.replace(match.group(0), str(replacement))
-            sources[field_path] = token
-        return result, sources
+            sources_str[field_path] = token
+        return result, sources_str
 
     def _lookup_context(self, path: str, context: dict[str, Any], field_path: str) -> Any:
         current: Any = context

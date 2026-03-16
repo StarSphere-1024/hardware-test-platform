@@ -252,7 +252,7 @@ class FunctionExecutor:
         return (
             ResultStatus.FAILED,
             code if code not in (None, 0) else -1,
-            "; ".join(failure_messages) if failure_messages else "function result did not satisfy expect rules",
+            "; ".join(str(msg) for msg in failure_messages if msg) if failure_messages else "function result did not satisfy expect rules",
             details_with_expect,
         )
 

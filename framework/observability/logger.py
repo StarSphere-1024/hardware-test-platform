@@ -12,7 +12,7 @@ from typing import Any
 from framework.config.models import ResolvedExecutionConfig
 from framework.domain.events import EventStatus, EventType, ExecutionEvent
 from framework.domain.execution import ExecutionContext, ExecutionPlan, ExecutionTask
-from framework.domain.results import ExecutionResult, ResultSnapshot
+from framework.domain.results import ExecutionResult, ResultSnapshot, ResultStatus
 from framework.execution.policies import normalize_status, summarize_children
 
 from .event_store import EventStore
@@ -84,7 +84,7 @@ class ExecutionObserver:
 
     def on_task_started(self, task: ExecutionTask, *, plan_id: str, attempt: int | None = None, status_before: str | None = None) -> None:
         with self._lock:
-            self.task_states[task.task_id] = "running"
+            self.task_states[task.task_id] = ResultStatus.RUNNING.value
             self.task_started_at.setdefault(task.task_id, datetime.now(timezone.utc))
             self._append_event(
                 event_type=EventType.TASK_STARTED,
@@ -94,7 +94,7 @@ class ExecutionObserver:
                 task=task,
                 attempt=attempt,
                 status_before=status_before,
-                status_after="running",
+                status_after=ResultStatus.RUNNING.value,
                 payload={
                     "timeout": task.timeout,
                     "dependencies": list(task.dependencies),
@@ -147,7 +147,7 @@ class ExecutionObserver:
                 plan_id=plan_id,
                 task=task,
                 attempt=(result.retry_count + 1) if task.task_type == "function" else None,
-                status_before="running",
+                status_before=ResultStatus.RUNNING.value,
                 status_after=normalized,
                 payload={
                     "code": result.code,
@@ -225,28 +225,27 @@ class ExecutionObserver:
         }
 
     def _build_case_summaries(self, root_result: ExecutionResult | None) -> list[dict[str, Any]]:
+        case_summaries: list[dict[str, Any]] = []
         if root_result is None:
-            cases: list[dict[str, Any]] = []
             for task in self.plan_tasks.values():
                 if task.task_type != "case":
                     continue
                 case_result = self.task_results.get(task.task_id)
                 if case_result is not None:
-                    cases.append(
+                    case_summaries.append(
                         self._build_case_summary_from_result(case_result)
                     )
                     continue
 
                 child_statuses = self._collect_child_statuses(task.task_id)
                 inferred_status = self._infer_task_status(task.task_id, child_statuses)
-                cases.append(self._build_case_summary_from_task(task, inferred_status, child_statuses))
-            return cases
-        cases: list[dict[str, Any]] = []
+                case_summaries.append(self._build_case_summary_from_task(task, inferred_status, child_statuses))
+            return case_summaries
         for child in root_result.children:
             if child.task_type != "case":
                 continue
-            cases.append(self._build_case_summary_from_result(child))
-        return cases
+            case_summaries.append(self._build_case_summary_from_result(child))
+        return case_summaries
 
     def _build_case_summary_from_result(self, case_result: ExecutionResult) -> dict[str, Any]:
         return {
@@ -267,7 +266,7 @@ class ExecutionObserver:
     ) -> dict[str, Any]:
         started_at = self.task_started_at.get(task.task_id)
         duration_ms = None
-        if started_at is not None and inferred_status == "running":
+        if started_at is not None and inferred_status == ResultStatus.RUNNING.value:
             duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
         return {
             "task_id": task.task_id,
@@ -297,12 +296,12 @@ class ExecutionObserver:
         direct_state = self.task_states.get(task_id)
         if direct_state is not None:
             if direct_state == "retrying":
-                return "running"
+                return ResultStatus.RUNNING.value
             if direct_state != "pending":
                 return direct_state
 
-        if any(status in {"running", "retrying"} for status in child_statuses):
-            return "running"
+        if any(status in {ResultStatus.RUNNING.value, "retrying"} for status in child_statuses):
+            return ResultStatus.RUNNING.value
         for terminal in ("failed", "timeout", "aborted"):
             if terminal in child_statuses:
                 return terminal
@@ -315,7 +314,7 @@ class ExecutionObserver:
     def _summarize_statuses(self, statuses: list[str]) -> dict[str, int]:
         summary: dict[str, int] = {}
         for status in statuses:
-            normalized = "running" if status == "retrying" else status
+            normalized = ResultStatus.RUNNING.value if status == "retrying" else status
             summary[normalized] = summary.get(normalized, 0) + 1
         return summary
 
@@ -323,20 +322,20 @@ class ExecutionObserver:
         if child_statuses:
             summary = self._summarize_statuses(child_statuses)
             ordered = ", ".join(f"{key}={value}" for key, value in sorted(summary.items()))
-            if status == "running":
+            if status == ResultStatus.RUNNING.value:
                 return f"case running: {ordered}"
             if status == "pending":
                 return f"case pending: {case_name}"
             return f"case in progress: {ordered}"
-        if status == "running":
+        if status == ResultStatus.RUNNING.value:
             return f"case running: {case_name}"
         if status == "pending":
             return f"case pending: {case_name}"
         return f"case status: {status}"
 
     def _infer_current_status(self, counters: dict[str, int]) -> str:
-        if counters.get("running") or counters.get("retrying"):
-            return "running"
+        if counters.get(ResultStatus.RUNNING.value) or counters.get("retrying"):
+            return ResultStatus.RUNNING.value
         for terminal in ("failed", "timeout", "aborted"):
             if counters.get(terminal):
                 return terminal

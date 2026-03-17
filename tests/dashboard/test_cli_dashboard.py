@@ -19,7 +19,10 @@ def _write_json(path: Path, payload: dict) -> None:
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n", encoding="utf-8")
+    path.write_text(
+        "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+        encoding="utf-8",
+    )
 
 
 def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
@@ -30,7 +33,9 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
         {
             "request_id": request_id,
             "plan_id": "plan.linux_host_pc",
-            "updated_at": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc).isoformat(),
+            "updated_at": datetime(
+                2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc
+            ).isoformat(),
             "current_status": "aborted",
             "fixture": {"name": "linux_host_pc", "status": "aborted"},
             "cases": [
@@ -39,7 +44,9 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
                     "status": "failed",
                     "message": "ping failed",
                     "summary": {"failed": 1},
-                    "started_at": datetime(2026, 3, 6, 11, 59, 30, tzinfo=timezone.utc).isoformat(),
+                    "started_at": datetime(
+                        2026, 3, 6, 11, 59, 30, tzinfo=timezone.utc
+                    ).isoformat(),
                     "duration_ms": 12000,
                 },
                 {
@@ -47,7 +54,9 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
                     "status": "aborted",
                     "message": "aborted by stop_on_failure",
                     "summary": {"aborted": 1},
-                    "started_at": datetime(2026, 3, 6, 11, 59, 42, tzinfo=timezone.utc).isoformat(),
+                    "started_at": datetime(
+                        2026, 3, 6, 11, 59, 42, tzinfo=timezone.utc
+                    ).isoformat(),
                     "duration_ms": 0,
                 },
             ],
@@ -89,10 +98,16 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
             "storage": {"used_gb": 8, "total_gb": 32, "usage_percent": 25.0},
         },
     )
-    (artifacts_root / "logs" / f"{request_id}.log").parent.mkdir(parents=True, exist_ok=True)
-    (artifacts_root / "logs" / f"{request_id}.log").write_text("line-1\nline-2\n", encoding="utf-8")
+    (artifacts_root / "logs" / f"{request_id}.log").parent.mkdir(
+        parents=True, exist_ok=True
+    )
+    (artifacts_root / "logs" / f"{request_id}.log").write_text(
+        "line-1\nline-2\n", encoding="utf-8"
+    )
     (artifacts_root / "reports").mkdir(parents=True, exist_ok=True)
-    (artifacts_root / "reports" / f"RK3576_{request_id}_aborted.report.json").write_text("{}", encoding="utf-8")
+    (
+        artifacts_root / "reports" / f"RK3576_{request_id}_aborted.report.json"
+    ).write_text("{}", encoding="utf-8")
 
     dashboard = CLIDashboard(
         workspace_root=REPO_ROOT,
@@ -118,7 +133,12 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
 
 
 def test_dashboard_module_table_shows_case_runtime(tmp_path: Path) -> None:
-    dashboard = CLIDashboard(workspace_root=REPO_ROOT, tmp_dir=tmp_path / "tmp", logs_dir=tmp_path / "logs", reports_dir=tmp_path / "reports")
+    dashboard = CLIDashboard(
+        workspace_root=REPO_ROOT,
+        tmp_dir=tmp_path / "tmp",
+        logs_dir=tmp_path / "logs",
+        reports_dir=tmp_path / "reports",
+    )
 
     panel = dashboard._create_module_table(
         [
@@ -191,7 +211,10 @@ def test_dashboard_running_runtime_uses_monotonic_baseline(monkeypatch) -> None:
             return value if tz is None else value.astimezone(tz)
 
     monotonic_values = iter([100.0, 101.9])
-    monkeypatch.setattr("framework.dashboard.cli_dashboard.time.monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(
+        "framework.dashboard.cli_dashboard.time.monotonic",
+        lambda: next(monotonic_values),
+    )
     monkeypatch.setattr("framework.dashboard.cli_dashboard.datetime", FakeDateTime)
 
     FakeDateTime.current = started_at + timedelta(milliseconds=1200)
@@ -201,16 +224,27 @@ def test_dashboard_running_runtime_uses_monotonic_baseline(monkeypatch) -> None:
     assert dashboard._case_runtime_display(case) == "3s"
 
 
-def test_dashboard_data_source_selects_latest_snapshot_when_request_is_omitted(tmp_path: Path) -> None:
+def test_dashboard_data_source_selects_latest_snapshot_when_request_is_omitted(
+    tmp_path: Path,
+) -> None:
     tmp_dir = tmp_path / "tmp"
     logs_dir = tmp_path / "logs"
     reports_dir = tmp_path / "reports"
     older = tmp_dir / "req-old_snapshot.json"
     newer = tmp_dir / "req-new_snapshot.json"
-    _write_json(older, {"request_id": "req-old", "fixture": {"name": "old"}, "cases": []})
-    _write_json(newer, {"request_id": "req-new", "fixture": {"name": "new"}, "cases": []})
+    _write_json(
+        older, {"request_id": "req-old", "fixture": {"name": "old"}, "cases": []}
+    )
+    _write_json(
+        newer, {"request_id": "req-new", "fixture": {"name": "new"}, "cases": []}
+    )
 
-    source = DashboardDataSource(workspace_root=REPO_ROOT, tmp_dir=tmp_dir, logs_dir=logs_dir, reports_dir=reports_dir)
+    source = DashboardDataSource(
+        workspace_root=REPO_ROOT,
+        tmp_dir=tmp_dir,
+        logs_dir=logs_dir,
+        reports_dir=reports_dir,
+    )
 
     snapshot = source.read_snapshot()
 
@@ -231,7 +265,9 @@ def test_dashboard_auto_exit_policy_uses_success_and_failure_delays() -> None:
     assert dashboard._linger_seconds_for_status("aborted") is None
 
 
-def test_dashboard_recent_failures_prefers_failed_function_messages(tmp_path: Path) -> None:
+def test_dashboard_recent_failures_prefers_failed_function_messages(
+    tmp_path: Path,
+) -> None:
     request_id = "req-dash-failures"
     artifacts_root = tmp_path / "artifacts"
     _write_json(
@@ -239,12 +275,24 @@ def test_dashboard_recent_failures_prefers_failed_function_messages(tmp_path: Pa
         {
             "request_id": request_id,
             "plan_id": "plan.rk3576_smoke",
-            "updated_at": datetime(2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc).isoformat(),
+            "updated_at": datetime(
+                2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc
+            ).isoformat(),
             "current_status": "failed",
             "fixture": {"name": "rk3576_smoke", "status": "failed"},
             "cases": [
-                {"name": "eth_case", "status": "failed", "message": "case completed: failed=1", "summary": {"failed": 1}},
-                {"name": "uart_case", "status": "timeout", "message": "case completed: timeout=1", "summary": {"timeout": 1}},
+                {
+                    "name": "eth_case",
+                    "status": "failed",
+                    "message": "case completed: failed=1",
+                    "summary": {"failed": 1},
+                },
+                {
+                    "name": "uart_case",
+                    "status": "timeout",
+                    "message": "case completed: timeout=1",
+                    "summary": {"timeout": 1},
+                },
             ],
             "counters": {"failed": 1, "timeout": 1},
             "status_summary": {"failed": 1, "timeout": 1},
@@ -308,7 +356,10 @@ def test_dashboard_recent_failures_prefers_failed_function_messages(tmp_path: Pa
     rendered = str(panel.renderable)
 
     assert "eth_case / test_eth_ping: ethernet peer must be reachable" in rendered
-    assert "uart_case / test_uart_loopback: function 'test_uart_loopback' timed out after 5s" in rendered
+    assert (
+        "uart_case / test_uart_loopback: function 'test_uart_loopback' timed out after 5s"
+        in rendered
+    )
     assert "case completed: failed=1" not in rendered
 
 
@@ -320,15 +371,42 @@ def test_dashboard_counts_timeout_cases_as_completed(tmp_path: Path) -> None:
         {
             "request_id": request_id,
             "plan_id": "plan.rk3576_smoke",
-            "updated_at": datetime(2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc).isoformat(),
+            "updated_at": datetime(
+                2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc
+            ).isoformat(),
             "current_status": "timeout",
             "fixture": {"name": "rk3576_smoke", "status": "timeout"},
             "cases": [
-                {"name": "eth_case", "status": "failed", "message": "failed", "summary": {"failed": 1}},
-                {"name": "uart_case", "status": "timeout", "message": "timeout", "summary": {"timeout": 1}},
-                {"name": "rtc_case", "status": "passed", "message": "passed", "summary": {"passed": 1}},
-                {"name": "i2c_case", "status": "passed", "message": "passed", "summary": {"passed": 1}},
-                {"name": "gpio_case", "status": "passed", "message": "passed", "summary": {"passed": 1}},
+                {
+                    "name": "eth_case",
+                    "status": "failed",
+                    "message": "failed",
+                    "summary": {"failed": 1},
+                },
+                {
+                    "name": "uart_case",
+                    "status": "timeout",
+                    "message": "timeout",
+                    "summary": {"timeout": 1},
+                },
+                {
+                    "name": "rtc_case",
+                    "status": "passed",
+                    "message": "passed",
+                    "summary": {"passed": 1},
+                },
+                {
+                    "name": "i2c_case",
+                    "status": "passed",
+                    "message": "passed",
+                    "summary": {"passed": 1},
+                },
+                {
+                    "name": "gpio_case",
+                    "status": "passed",
+                    "message": "passed",
+                    "summary": {"passed": 1},
+                },
             ],
             "counters": {"failed": 1, "timeout": 1, "passed": 3},
             "status_summary": {"failed": 1, "timeout": 1, "passed": 3},

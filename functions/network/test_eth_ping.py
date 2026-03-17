@@ -15,7 +15,11 @@ def test_eth_ping(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
-    registry = capability_registry or getattr(execution_context, "capability_registry", None) or {}
+    registry = (
+        capability_registry
+        or getattr(execution_context, "capability_registry", None)
+        or {}
+    )
     network = registry.get("network")
     if network is None:
         return {
@@ -25,7 +29,9 @@ def test_eth_ping(
         }
 
     selected_interface = interface or network.resolve_bound_interface()
-    ping_result = network.ping(target_ip, interface=selected_interface, count=count, timeout=timeout)
+    ping_result = network.ping(
+        target_ip, interface=selected_interface, count=count, timeout=timeout
+    )
     stdout = ping_result.get("stdout", "")
     packet_loss = float(ping_result.get("packet_loss", 0.0))
     avg_latency_ms = float(ping_result.get("avg_latency_ms", 0.0))

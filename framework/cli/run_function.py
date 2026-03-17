@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from .common import (
     CLIError,
@@ -19,10 +20,22 @@ from .common import (
 )
 
 
-def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable[..., Any]] | None = None) -> int:
-    parser = create_base_parser("Execute a single function callable", include_board_profile=True)
-    parser.add_argument("--callable", required=True, help="python callable path in module:function format")
-    parser.add_argument("--params", default="{}", help="JSON object params for callable")
+def main(
+    argv: list[str] | None = None,
+    *,
+    function_registry: dict[str, Callable[..., Any]] | None = None,
+) -> int:
+    parser = create_base_parser(
+        "Execute a single function callable", include_board_profile=True
+    )
+    parser.add_argument(
+        "--callable",
+        required=True,
+        help="python callable path in module:function format",
+    )
+    parser.add_argument(
+        "--params", default="{}", help="JSON object params for callable"
+    )
     args = parser.parse_args(argv)
     args = normalize_cli_args(args)
     try:
@@ -30,9 +43,15 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
         function_name, callable_obj = load_callable(args.callable)
         registry = dict(function_registry or {})
         registry[function_name] = callable_obj
-        request = build_execution_request(args, target_type="function", target_name=args.callable)
-        resolved_config = build_function_resolved_config(args, request, function_name=function_name, params=params)
-        plan = build_function_plan(resolved_config, function_name=function_name, params=params)
+        request = build_execution_request(
+            args, target_type="function", target_name=args.callable
+        )
+        resolved_config = build_function_resolved_config(
+            args, request, function_name=function_name, params=params
+        )
+        plan = build_function_plan(
+            resolved_config, function_name=function_name, params=params
+        )
         payload = execute_plan(
             resolved_config=resolved_config,
             plan=plan,
@@ -43,6 +62,7 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
             dashboard_refresh_interval=args.dashboard_refresh,
             dashboard_start_monitor=not args.dashboard_no_monitor,
             dashboard_keep_open=args.dashboard_keep_open,
+            verbose_level=1 if args.verbose else 0,
         )
         print_payload(payload)
         return payload_exit_code(payload)

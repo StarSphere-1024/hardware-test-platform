@@ -38,7 +38,9 @@ class LinuxI2CCapability(I2CCapabilityContract):
             "requested_buses": list(selected_buses),
             "bus_count": len(selected_buses),
             "buses": summary,
-            "error_type": None if success else ("device_not_found" if selected_buses else "no_bus_selected"),
+            "error_type": None
+            if success
+            else ("device_not_found" if selected_buses else "no_bus_selected"),
             "message": (
                 f"i2c scan ok, buses={len(selected_buses)}"
                 if success
@@ -52,5 +54,9 @@ class LinuxI2CCapability(I2CCapabilityContract):
             return [item for item in value if isinstance(item, str)]
         if isinstance(value, dict):
             items = value.get("items")
-            return [item for item in items if isinstance(item, str)] if isinstance(items, list) else []
+            return (
+                [item for item in items if isinstance(item, str)]
+                if isinstance(items, list)
+                else []
+            )
         return []

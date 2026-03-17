@@ -25,7 +25,9 @@ class _FakeRTCCapability:
 def test_rtc_read_uses_rtc_capability() -> None:
     capability = _FakeRTCCapability()
 
-    result = rtc_read_function(rtc_device="/dev/rtc0", capability_registry={"rtc": capability})
+    result = rtc_read_function(
+        rtc_device="/dev/rtc0", capability_registry={"rtc": capability}
+    )
 
     assert result["code"] == 0
     assert result["status"] == "passed"

@@ -24,7 +24,9 @@ class _FakeGPIOCapability:
 def test_gpio_mapping_uses_gpio_capability() -> None:
     capability = _FakeGPIOCapability()
 
-    result = gpio_mapping_function(physical_pin=7, capability_registry={"gpio": capability})
+    result = gpio_mapping_function(
+        physical_pin=7, capability_registry={"gpio": capability}
+    )
 
     assert result["code"] == 0
     assert result["status"] == "passed"

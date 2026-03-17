@@ -9,7 +9,8 @@ import socket
 import subprocess
 import time
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
+from collections.abc import Sequence
 
 from .base import CommandResult, PlatformAdapter
 
@@ -19,7 +20,13 @@ class LinuxAdapter(PlatformAdapter):
     def platform_name(self) -> str:
         return "linux"
 
-    def execute(self, command: str | Sequence[str], *, timeout: int | None = None, shell: bool | None = None) -> CommandResult:
+    def execute(
+        self,
+        command: str | Sequence[str],
+        *,
+        timeout: int | None = None,
+        shell: bool | None = None,
+    ) -> CommandResult:
         started_at = time.perf_counter()
         if isinstance(command, str):
             use_shell = True if shell is None else shell
@@ -76,10 +83,14 @@ class LinuxAdapter(PlatformAdapter):
         }
         model_path = Path("/proc/device-tree/model")
         if model_path.exists():
-            info["device_model"] = model_path.read_text(encoding="utf-8", errors="ignore").strip("\x00\n")
+            info["device_model"] = model_path.read_text(
+                encoding="utf-8", errors="ignore"
+            ).strip("\x00\n")
         os_release = Path("/etc/os-release")
         if os_release.exists():
-            for line in os_release.read_text(encoding="utf-8", errors="ignore").splitlines():
+            for line in os_release.read_text(
+                encoding="utf-8", errors="ignore"
+            ).splitlines():
                 if line.startswith("PRETTY_NAME="):
                     info["os"] = line.split("=", 1)[1].strip().strip('"')
                     break

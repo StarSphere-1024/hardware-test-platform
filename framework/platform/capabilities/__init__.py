@@ -20,16 +20,16 @@ from .linux import (
 
 __all__ = [
     "CapabilityBase",
-    "GPIOCapabilityContract",
     "GPIOCapability",
-    "I2CCapabilityContract",
+    "GPIOCapabilityContract",
     "I2CCapability",
-    "NetworkCapabilityContract",
+    "I2CCapabilityContract",
     "NetworkCapability",
-    "RTCCapabilityContract",
+    "NetworkCapabilityContract",
     "RTCCapability",
-    "SerialCapabilityContract",
+    "RTCCapabilityContract",
     "SerialCapability",
-    "SystemInfoCapabilityContract",
+    "SerialCapabilityContract",
     "SystemInfoCapability",
+    "SystemInfoCapabilityContract",
 ]

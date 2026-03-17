@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from framework.domain.results import ExecutionResult, ResultStatus
 
 
-TERMINAL_FAILURE_STATUSES = {ResultStatus.FAILED.value, ResultStatus.TIMEOUT.value, ResultStatus.ABORTED.value}
+TERMINAL_FAILURE_STATUSES = {
+    ResultStatus.FAILED.value,
+    ResultStatus.TIMEOUT.value,
+    ResultStatus.ABORTED.value,
+}
 NON_TERMINAL_STATUSES = {ResultStatus.RUNNING.value, ResultStatus.SKIPPED.value}
 
 
@@ -46,7 +50,11 @@ def should_retry(status: ResultStatus | str, attempt: int, max_retries: int) -> 
     Returns:
         True if the task should be retried, False otherwise
     """
-    return normalize_status(status) in {ResultStatus.FAILED.value, ResultStatus.TIMEOUT.value} and attempt < max_retries
+    return (
+        normalize_status(status)
+        in {ResultStatus.FAILED.value, ResultStatus.TIMEOUT.value}
+        and attempt < max_retries
+    )
 
 
 def aggregate_status(children: Iterable[ExecutionResult]) -> ResultStatus:

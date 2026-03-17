@@ -3,7 +3,12 @@
 from __future__ import annotations
 
 from framework.domain.results import ExecutionResult, ResultStatus
-from framework.execution.policies import aggregate_status, is_success_status, normalize_status, should_retry
+from framework.execution.policies import (
+    aggregate_status,
+    is_success_status,
+    normalize_status,
+    should_retry,
+)
 
 
 class TestResultStatusEnum:
@@ -17,7 +22,14 @@ class TestResultStatusEnum:
 
     def test_result_status_all_members(self) -> None:
         """Verify all expected ResultStatus members exist."""
-        expected_members = {"PASSED", "FAILED", "RUNNING", "TIMEOUT", "SKIPPED", "ABORTED"}
+        expected_members = {
+            "PASSED",
+            "FAILED",
+            "RUNNING",
+            "TIMEOUT",
+            "SKIPPED",
+            "ABORTED",
+        }
         actual_members = {member.name for member in ResultStatus}
         assert expected_members == actual_members
 

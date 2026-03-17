@@ -12,7 +12,10 @@ from ..base import RTCCapabilityContract
 class LinuxRTCCapability(RTCCapabilityContract):
     def list_devices(self) -> list[str]:
         devices = self.adapter._list_paths("/dev/rtc*")
-        return sorted([path for path in devices if path != "/dev/rtc"] + (["/dev/rtc"] if "/dev/rtc" in devices else []))
+        return sorted(
+            [path for path in devices if path != "/dev/rtc"]
+            + (["/dev/rtc"] if "/dev/rtc" in devices else [])
+        )
 
     def device_exists(self, device: str) -> bool:
         return self.adapter._path_exists(device)
@@ -36,7 +39,9 @@ class LinuxRTCCapability(RTCCapabilityContract):
                 "message": "rtc device not found",
             }
 
-        result = self.adapter.execute(["hwclock", f"--rtc={rtc_device}", "--show"], timeout=5)
+        result = self.adapter.execute(
+            ["hwclock", f"--rtc={rtc_device}", "--show"], timeout=5
+        )
         if result.success and result.stdout.strip():
             parsed = self._parse_hwclock_output(result.stdout)
             if parsed is not None:
@@ -84,7 +89,11 @@ class LinuxRTCCapability(RTCCapabilityContract):
             return [item for item in value if isinstance(item, str)]
         if isinstance(value, dict):
             items = value.get("items")
-            return [item for item in items if isinstance(item, str)] if isinstance(items, list) else []
+            return (
+                [item for item in items if isinstance(item, str)]
+                if isinstance(items, list)
+                else []
+            )
         return []
 
     def _parse_hwclock_output(self, output: str) -> datetime | None:
@@ -93,7 +102,11 @@ class LinuxRTCCapability(RTCCapabilityContract):
         for pattern in ("%Y-%m-%d %H:%M:%S", "%a %d %b %Y %I:%M:%S %p %Z"):
             try:
                 parsed = datetime.strptime(head, pattern)
-                return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+                return (
+                    parsed.replace(tzinfo=timezone.utc)
+                    if parsed.tzinfo is None
+                    else parsed
+                )
             except ValueError:
                 continue
         return None

@@ -10,21 +10,40 @@ import sys
 import threading
 import uuid
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from framework.config.loader import ConfigLoader
-from framework.config.models import CaseSpec, FunctionInvocationSpec, ResolvedExecutionConfig
+from framework.config.models import (
+    CaseSpec,
+    FunctionInvocationSpec,
+    ResolvedExecutionConfig,
+)
 from framework.config.resolver import ConfigResolver
-from framework.domain.execution import ArtifactDirectories, ExecutionContext, ExecutionPlan, ExecutionTask, RetryPolicy
+from framework.domain.execution import (
+    ArtifactDirectories,
+    ExecutionContext,
+    ExecutionPlan,
+    ExecutionTask,
+    RetryPolicy,
+)
 from framework.domain.requests import ExecutionRequest
 from framework.execution.function_executor import FunctionExecutor
 from framework.execution.scheduler import Scheduler
-from framework.observability import EventStore, ExecutionObserver, ReportGenerator, ResultStore, UnifiedLogger
+from framework.observability import (
+    EventStore,
+    ExecutionObserver,
+    ReportGenerator,
+    ResultStore,
+    UnifiedLogger,
+)
 from framework.platform.registry import PlatformRegistry
 
 
 class CLIError(Exception):
-    def __init__(self, message: str, *, exit_code: int = 2, payload: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self, message: str, *, exit_code: int = 2, payload: dict[str, Any] | None = None
+    ) -> None:
         super().__init__(message)
         self.exit_code = exit_code
         self.payload = dict(payload or {"error": message})
@@ -46,7 +65,9 @@ def _iter_workspace_root_candidates(args: argparse.Namespace) -> list[Path]:
             continue
         candidate = Path(value)
         if candidate.is_absolute():
-            origins.append((candidate if candidate.is_dir() else candidate.parent).resolve())
+            origins.append(
+                (candidate if candidate.is_dir() else candidate.parent).resolve()
+            )
 
     seen: set[Path] = set()
     ordered: list[Path] = []
@@ -114,45 +135,123 @@ def normalize_cli_args(args: argparse.Namespace) -> argparse.Namespace:
     workspace_root = resolve_workspace_root(args)
     args.workspace_root = str(workspace_root)
     if hasattr(args, "config"):
-        args.config = _normalize_path_arg(getattr(args, "config", None), workspace_root=workspace_root)
-    args.global_config = _normalize_path_arg(getattr(args, "global_config", None), workspace_root=workspace_root)
+        args.config = _normalize_path_arg(
+            getattr(args, "config", None), workspace_root=workspace_root
+        )
+    args.global_config = _normalize_path_arg(
+        getattr(args, "global_config", None), workspace_root=workspace_root
+    )
     return args
 
 
-def create_base_parser(description: str, *, include_board_profile: bool = False) -> argparse.ArgumentParser:
+def create_base_parser(
+    description: str, *, include_board_profile: bool = False
+) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument("--request-id", default=None, help="explicit request id used for logs/tmp/reports correlation")
-    parser.add_argument("--workspace-root", default=None, help="workspace root used for config resolution; auto-detected when omitted")
-    parser.add_argument("--artifacts-root", default=None, help="output root for logs/tmp/reports")
-    parser.add_argument("--global-config", default=None, help="override global config path")
+    parser.add_argument(
+        "--request-id",
+        default=None,
+        help="explicit request id used for logs/tmp/reports correlation",
+    )
+    parser.add_argument(
+        "--workspace-root",
+        default=None,
+        help="workspace root used for config resolution; auto-detected when omitted",
+    )
+    parser.add_argument(
+        "--artifacts-root", default=None, help="output root for logs/tmp/reports"
+    )
+    parser.add_argument(
+        "--global-config", default=None, help="override global config path"
+    )
     if include_board_profile:
-        parser.add_argument("--board-profile", default=None, help="explicit board profile name")
+        parser.add_argument(
+            "--board-profile", default=None, help="explicit board profile name"
+        )
     parser.add_argument("--sn", default=None, help="serial number")
     parser.add_argument("--operator", default=None, help="operator name")
-    parser.add_argument("--trigger-source", default="cli", help="request trigger source")
-    parser.add_argument("--timeout", type=int, default=None, help="override timeout seconds")
+    parser.add_argument(
+        "--trigger-source", default="cli", help="request trigger source"
+    )
+    parser.add_argument(
+        "--timeout", type=int, default=None, help="override timeout seconds"
+    )
     parser.add_argument("--retry", type=int, default=None, help="override retry count")
-    parser.add_argument("--retry-interval", type=int, default=None, help="override retry interval seconds")
+    parser.add_argument(
+        "--retry-interval",
+        type=int,
+        default=None,
+        help="override retry interval seconds",
+    )
     parser.add_argument(
         "--resource-lock-quarantine-seconds",
         type=float,
         default=None,
         help="override resource quarantine duration after timeout",
     )
-    parser.add_argument("--execution", choices=["sequential", "parallel"], default=None, help="override execution mode")
-    parser.add_argument("--stop-on-failure", action="store_true", help="stop on first failure")
-    parser.add_argument("--report-enabled", dest="report_enabled", action="store_true", default=None, help="force report generation")
-    parser.add_argument("--no-report", dest="report_enabled", action="store_false", help="disable report generation")
-    parser.add_argument("--dashboard", action="store_true", help="attach terminal dashboard during execution")
-    parser.add_argument("--dashboard-refresh", type=float, default=1.0, help="dashboard refresh interval in seconds")
-    parser.add_argument("--dashboard-no-monitor", action="store_true", help="disable system monitoring in attached dashboard")
-    parser.add_argument("--dashboard-keep-open", action="store_true", help="keep dashboard open after execution until manual quit")
+    parser.add_argument(
+        "--execution",
+        choices=["sequential", "parallel"],
+        default=None,
+        help="override execution mode",
+    )
+    parser.add_argument(
+        "--stop-on-failure", action="store_true", help="stop on first failure"
+    )
+    parser.add_argument(
+        "--report-enabled",
+        dest="report_enabled",
+        action="store_true",
+        default=None,
+        help="force report generation",
+    )
+    parser.add_argument(
+        "--no-report",
+        dest="report_enabled",
+        action="store_false",
+        help="disable report generation",
+    )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="attach terminal dashboard during execution",
+    )
+    parser.add_argument(
+        "--dashboard-refresh",
+        type=float,
+        default=1.0,
+        help="dashboard refresh interval in seconds",
+    )
+    parser.add_argument(
+        "--dashboard-no-monitor",
+        action="store_true",
+        help="disable system monitoring in attached dashboard",
+    )
+    parser.add_argument(
+        "--dashboard-keep-open",
+        action="store_true",
+        help="keep dashboard open after execution until manual quit",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="enable verbose (DEBUG) logging",
+    )
     return parser
 
 
 def cli_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
     overrides: dict[str, Any] = {}
-    for key in ("timeout", "retry", "retry_interval", "resource_lock_quarantine_seconds", "execution", "report_enabled"):
+    for key in (
+        "timeout",
+        "retry",
+        "retry_interval",
+        "resource_lock_quarantine_seconds",
+        "execution",
+        "report_enabled",
+    ):
         value = getattr(args, key)
         if value is not None:
             overrides[key] = value
@@ -161,7 +260,9 @@ def cli_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
     return overrides
 
 
-def build_execution_request(args: argparse.Namespace, *, target_type: str, target_name: str) -> ExecutionRequest:
+def build_execution_request(
+    args: argparse.Namespace, *, target_type: str, target_name: str
+) -> ExecutionRequest:
     return ExecutionRequest(
         request_id=args.request_id or f"req-{uuid.uuid4().hex[:12]}",
         target_type=target_type,
@@ -174,7 +275,9 @@ def build_execution_request(args: argparse.Namespace, *, target_type: str, targe
     )
 
 
-def build_fixture_resolved_config(args: argparse.Namespace, request: ExecutionRequest) -> ResolvedExecutionConfig:
+def build_fixture_resolved_config(
+    args: argparse.Namespace, request: ExecutionRequest
+) -> ResolvedExecutionConfig:
     resolver = ConfigResolver(Path(args.workspace_root).resolve())
     return resolver.resolve_fixture(
         args.config,
@@ -185,7 +288,9 @@ def build_fixture_resolved_config(args: argparse.Namespace, request: ExecutionRe
     )
 
 
-def build_case_resolved_config(args: argparse.Namespace, request: ExecutionRequest) -> ResolvedExecutionConfig:
+def build_case_resolved_config(
+    args: argparse.Namespace, request: ExecutionRequest
+) -> ResolvedExecutionConfig:
     resolver = ConfigResolver(Path(args.workspace_root).resolve())
     return resolver.resolve_case(
         args.config,
@@ -206,18 +311,37 @@ def build_function_resolved_config(
     workspace_root = Path(args.workspace_root).resolve()
     loader = ConfigLoader(workspace_root)
     global_config, global_source = loader.load_global_config(args.global_config)
-    board_profile_name = getattr(args, "board_profile", None) or global_config.product.default_board_profile
-    board_profile, board_source = loader.load_board_profile(profile_name=board_profile_name)
+    board_profile_name = (
+        getattr(args, "board_profile", None)
+        or global_config.product.default_board_profile
+    )
+    board_profile, board_source = loader.load_board_profile(
+        profile_name=board_profile_name
+    )
 
-    timeout = args.timeout if args.timeout is not None else global_config.runtime.default_timeout
-    retry = args.retry if args.retry is not None else global_config.runtime.default_retry
-    retry_interval = args.retry_interval if args.retry_interval is not None else global_config.runtime.default_retry_interval
+    timeout = (
+        args.timeout
+        if args.timeout is not None
+        else global_config.runtime.default_timeout
+    )
+    retry = (
+        args.retry if args.retry is not None else global_config.runtime.default_retry
+    )
+    retry_interval = (
+        args.retry_interval
+        if args.retry_interval is not None
+        else global_config.runtime.default_retry_interval
+    )
     resource_lock_quarantine_seconds = (
         args.resource_lock_quarantine_seconds
         if args.resource_lock_quarantine_seconds is not None
         else global_config.runtime.default_resource_lock_quarantine_seconds
     )
-    report_enabled = args.report_enabled if args.report_enabled is not None else global_config.observability.report_enabled
+    report_enabled = (
+        args.report_enabled
+        if args.report_enabled is not None
+        else global_config.observability.report_enabled
+    )
 
     function_spec = FunctionInvocationSpec(
         name=function_name,
@@ -271,11 +395,22 @@ def build_function_resolved_config(
             "global_config": global_source,
             "board_profile": board_source,
             "runtime": {
-                "timeout": {"source": "cli" if args.timeout is not None else "global", "value": timeout},
-                "retry": {"source": "cli" if args.retry is not None else "global", "value": retry},
-                "retry_interval": {"source": "cli" if args.retry_interval is not None else "global", "value": retry_interval},
+                "timeout": {
+                    "source": "cli" if args.timeout is not None else "global",
+                    "value": timeout,
+                },
+                "retry": {
+                    "source": "cli" if args.retry is not None else "global",
+                    "value": retry,
+                },
+                "retry_interval": {
+                    "source": "cli" if args.retry_interval is not None else "global",
+                    "value": retry_interval,
+                },
                 "resource_lock_quarantine_seconds": {
-                    "source": "cli" if args.resource_lock_quarantine_seconds is not None else "global",
+                    "source": "cli"
+                    if args.resource_lock_quarantine_seconds is not None
+                    else "global",
                     "value": resource_lock_quarantine_seconds,
                 },
             },
@@ -283,7 +418,12 @@ def build_function_resolved_config(
     )
 
 
-def build_function_plan(resolved_config: ResolvedExecutionConfig, *, function_name: str, params: dict[str, Any]) -> ExecutionPlan:
+def build_function_plan(
+    resolved_config: ResolvedExecutionConfig,
+    *,
+    function_name: str,
+    params: dict[str, Any],
+) -> ExecutionPlan:
     runtime = resolved_config.resolved_runtime
     root_task = ExecutionTask(
         task_id=f"function.{function_name}",
@@ -298,7 +438,9 @@ def build_function_plan(resolved_config: ResolvedExecutionConfig, *, function_na
         payload={
             "function_name": function_name,
             "params": params,
-            "resource_lock_quarantine_seconds": runtime.get("resource_lock_quarantine_seconds"),
+            "resource_lock_quarantine_seconds": runtime.get(
+                "resource_lock_quarantine_seconds"
+            ),
         },
     )
     return ExecutionPlan(
@@ -323,7 +465,9 @@ def load_callable(callable_path: str) -> tuple[str, Callable[..., Any]]:
     return attr_name, function
 
 
-def discover_workspace_functions(workspace_root: str | Path, function_names: set[str]) -> dict[str, Callable[..., Any]]:
+def discover_workspace_functions(
+    workspace_root: str | Path, function_names: set[str]
+) -> dict[str, Callable[..., Any]]:
     registry: dict[str, Callable[..., Any]] = {}
     functions_root = Path(workspace_root).resolve() / "functions"
     if not functions_root.exists():
@@ -369,6 +513,7 @@ def execute_plan(
     dashboard_refresh_interval: float = 1.0,
     dashboard_start_monitor: bool = True,
     dashboard_keep_open: bool = False,
+    verbose_level: int = 0,
 ) -> dict[str, Any]:
     workspace = Path(workspace_root).resolve()
     outputs_root = Path(artifacts_root).resolve() if artifacts_root else workspace
@@ -379,13 +524,15 @@ def execute_plan(
     tmp_dir.mkdir(parents=True, exist_ok=True)
     reports_dir.mkdir(parents=True, exist_ok=True)
 
-    adapters, capabilities = PlatformRegistry().create_runtime_registries(resolved_config.board_profile)
+    adapters, capabilities = PlatformRegistry().create_runtime_registries(
+        resolved_config.board_profile
+    )
     observer = ExecutionObserver(
         resolved_config=resolved_config,
         result_store=ResultStore(tmp_dir),
         event_store=EventStore(logs_dir / "events"),
         report_generator=ReportGenerator(reports_dir),
-        logger=UnifiedLogger(logs_dir),
+        logger=UnifiedLogger(logs_dir, verbose_level=verbose_level),
     )
     context = ExecutionContext(
         request_id=str(resolved_config.request["request_id"]),
@@ -394,16 +541,24 @@ def execute_plan(
         adapter_registry=adapters,
         capability_registry=capabilities,
         runtime_state={"observability": observer},
-        artifacts_dir=ArtifactDirectories(logs_dir=logs_dir, tmp_dir=tmp_dir, reports_dir=reports_dir),
+        artifacts_dir=ArtifactDirectories(
+            logs_dir=logs_dir, tmp_dir=tmp_dir, reports_dir=reports_dir
+        ),
     )
 
     registry = dict(function_registry or {})
     missing_function_names = {
         task.payload.get("function_name")
         for task in plan.tasks
-        if task.task_type == "function" and task.payload.get("function_name") not in registry
+        if task.task_type == "function"
+        and task.payload.get("function_name") not in registry
     }
-    registry.update(discover_workspace_functions(workspace, {name for name in missing_function_names if isinstance(name, str)}))
+    registry.update(
+        discover_workspace_functions(
+            workspace,
+            {name for name in missing_function_names if isinstance(name, str)},
+        )
+    )
 
     root_result, dashboard_meta = _run_scheduler(
         registry=registry,
@@ -419,7 +574,11 @@ def execute_plan(
     payload = {
         "request_id": context.request_id,
         "plan_id": plan.plan_id,
-        "status": str(root_result.status.value if hasattr(root_result.status, "value") else root_result.status),
+        "status": str(
+            root_result.status.value
+            if hasattr(root_result.status, "value")
+            else root_result.status
+        ),
         "result": root_result.to_dict(),
         "snapshot_path": str(observer.result_store.snapshot_path(context.request_id)),
         "event_log_path": str(observer.event_store.event_log_path(context.request_id)),
@@ -456,12 +615,18 @@ def _run_scheduler(
         except BaseException as error:  # pragma: no cover - surfaced after join
             error_box["error"] = error
 
-    worker = threading.Thread(target=_worker, name=f"dashboard-exec-{context.request_id}", daemon=True)
+    worker = threading.Thread(
+        target=_worker, name=f"dashboard-exec-{context.request_id}", daemon=True
+    )
     worker.start()
     observability_config = context.resolved_config.global_config.observability
     dashboard_meta = _attach_dashboard(
         request_id=context.request_id,
-        fixture_name=str(context.resolved_config.fixture.fixture_name if context.resolved_config.fixture else ""),
+        fixture_name=str(
+            context.resolved_config.fixture.fixture_name
+            if context.resolved_config.fixture
+            else ""
+        ),
         workspace_root=workspace_root,
         outputs_root=outputs_root,
         refresh_interval=dashboard_refresh_interval,
@@ -515,12 +680,16 @@ def _attach_dashboard(
             request_id=request_id,
             refresh_interval=refresh_interval,
             start_monitor=start_monitor,
-            auto_exit=success_exit_linger_seconds is not None or failure_exit_linger_seconds is not None,
+            auto_exit=success_exit_linger_seconds is not None
+            or failure_exit_linger_seconds is not None,
             success_exit_linger_seconds=success_exit_linger_seconds,
             failure_exit_linger_seconds=failure_exit_linger_seconds,
         )
         metadata["attached"] = True
-        metadata["auto_exit"] = success_exit_linger_seconds is not None or failure_exit_linger_seconds is not None
+        metadata["auto_exit"] = (
+            success_exit_linger_seconds is not None
+            or failure_exit_linger_seconds is not None
+        )
         metadata["success_exit_linger_seconds"] = success_exit_linger_seconds
         metadata["failure_exit_linger_seconds"] = failure_exit_linger_seconds
     except Exception as error:  # pragma: no cover - dashboard should not fail execution

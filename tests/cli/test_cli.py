@@ -21,7 +21,11 @@ def _mock_function_registry() -> dict[str, object]:
         "test_eth_ping": lambda interface, target_ip: {
             "code": 0,
             "message": f"ping {target_ip} via {interface}",
-            "details": {"success": True, "interface": interface, "target_ip": target_ip},
+            "details": {
+                "success": True,
+                "interface": interface,
+                "target_ip": target_ip,
+            },
             "metrics": {"packet_loss": 0.0},
         },
         "test_uart_loopback": lambda port, baudrate, payload: {
@@ -48,7 +52,9 @@ def _mock_function_registry() -> dict[str, object]:
     }
 
 
-def test_run_fixture_cli_executes_fixture_and_prints_paths(tmp_path: Path, capsys) -> None:
+def test_run_fixture_cli_executes_fixture_and_prints_paths(
+    tmp_path: Path, capsys
+) -> None:
     exit_code = run_fixture_main(
         [
             "--workspace-root",
@@ -70,7 +76,9 @@ def test_run_fixture_cli_executes_fixture_and_prints_paths(tmp_path: Path, capsy
     assert len(payload["report_paths"]) == 2
 
 
-def test_run_fixture_cli_can_attach_dashboard(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_fixture_cli_can_attach_dashboard(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     attached: dict[str, object] = {}
 
     def fake_attach_dashboard(**kwargs):
@@ -112,7 +120,9 @@ def test_run_fixture_cli_can_attach_dashboard(tmp_path: Path, monkeypatch, capsy
     assert attached["failure_exit_linger_seconds"] is None
 
 
-def test_run_fixture_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_fixture_cli_auto_detects_workspace_root_from_subdir(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     monkeypatch.chdir(REPO_ROOT / "framework")
 
     exit_code = run_fixture_main(
@@ -132,7 +142,9 @@ def test_run_fixture_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path,
     assert Path(payload["snapshot_path"]).exists()
 
 
-def test_run_fixture_cli_accepts_config_relative_to_current_subdir_when_root_omitted(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_fixture_cli_accepts_config_relative_to_current_subdir_when_root_omitted(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     monkeypatch.chdir(REPO_ROOT / "fixtures")
 
     exit_code = run_fixture_main(
@@ -151,7 +163,9 @@ def test_run_fixture_cli_accepts_config_relative_to_current_subdir_when_root_omi
     assert payload["status"] == "passed"
 
 
-def test_run_fixture_cli_executes_parallel_fixture_asset(tmp_path: Path, capsys) -> None:
+def test_run_fixture_cli_executes_parallel_fixture_asset(
+    tmp_path: Path, capsys
+) -> None:
     start_times: dict[str, float] = {}
     start_lock = threading.Lock()
     both_started = threading.Event()
@@ -166,7 +180,11 @@ def test_run_fixture_cli_executes_parallel_fixture_asset(tmp_path: Path, capsys)
         return {
             "code": 0,
             "message": f"ping {target_ip} via {interface}",
-            "details": {"success": True, "interface": interface, "target_ip": target_ip},
+            "details": {
+                "success": True,
+                "interface": interface,
+                "target_ip": target_ip,
+            },
         }
 
     def uart_runner(port, baudrate, payload):
@@ -204,13 +222,18 @@ def test_run_fixture_cli_executes_parallel_fixture_asset(tmp_path: Path, capsys)
     assert exit_code == 0
     assert payload["status"] == "passed"
     assert payload["result"]["name"] == "linux_host_pc_parallel"
-    assert [case_result["name"] for case_result in payload["result"]["children"]] == ["eth_case", "uart_case"]
+    assert [case_result["name"] for case_result in payload["result"]["children"]] == [
+        "eth_case",
+        "uart_case",
+    ]
     assert set(start_times) == {"eth", "uart"}
     assert abs(start_times["eth"] - start_times["uart"]) < 0.1
     assert elapsed < 0.2
 
 
-def test_run_function_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_function_cli_auto_detects_workspace_root_from_subdir(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     module_path = tmp_path / "sample_funcs.py"
     module_path.write_text(
         "def ping_once(target_ip, count=1):\n"
@@ -238,7 +261,9 @@ def test_run_function_cli_auto_detects_workspace_root_from_subdir(tmp_path: Path
     assert payload["result"]["details"]["count"] == 2
 
 
-def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     from datetime import datetime, timezone
 
     from framework.platform.capabilities import (
@@ -356,7 +381,11 @@ def test_run_case_cli_executes_case_request(tmp_path: Path, capsys) -> None:
             "test_eth_ping": lambda interface, target_ip: {
                 "code": 0,
                 "message": f"ping {target_ip} via {interface}",
-                "details": {"success": True, "interface": interface, "target_ip": target_ip},
+                "details": {
+                    "success": True,
+                    "interface": interface,
+                    "target_ip": target_ip,
+                },
                 "metrics": {"packet_loss": 0.0},
             }
         },
@@ -369,7 +398,9 @@ def test_run_case_cli_executes_case_request(tmp_path: Path, capsys) -> None:
     assert payload["result"]["children"][0]["children"][0]["message"].startswith("ping")
 
 
-def test_run_case_cli_auto_discovers_real_eth_function(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_case_cli_auto_discovers_real_eth_function(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     from framework.platform.capabilities import NetworkCapability
 
     def fake_ping(self, target_ip, *, interface=None, count=1, timeout=5):
@@ -405,11 +436,18 @@ def test_run_case_cli_auto_discovers_real_eth_function(tmp_path: Path, monkeypat
 
     assert exit_code == 0
     assert payload["status"] == "passed"
-    assert payload["result"]["children"][0]["children"][0]["message"].startswith("ping 192.168.100.1 via")
-    assert payload["result"]["children"][0]["children"][0]["metrics"]["avg_latency_ms"] == 0.321
+    assert payload["result"]["children"][0]["children"][0]["message"].startswith(
+        "ping 192.168.100.1 via"
+    )
+    assert (
+        payload["result"]["children"][0]["children"][0]["metrics"]["avg_latency_ms"]
+        == 0.321
+    )
 
 
-def test_run_case_cli_auto_discovers_real_rtc_function(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_case_cli_auto_discovers_real_rtc_function(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     from datetime import datetime, timezone
 
     from framework.platform.capabilities import RTCCapability
@@ -443,10 +481,15 @@ def test_run_case_cli_auto_discovers_real_rtc_function(tmp_path: Path, monkeypat
     assert exit_code == 0
     assert payload["status"] == "passed"
     assert payload["result"]["children"][0]["children"][0]["name"] == "test_rtc_read"
-    assert payload["result"]["children"][0]["children"][0]["details"]["source"] == "hwclock"
+    assert (
+        payload["result"]["children"][0]["children"][0]["details"]["source"]
+        == "hwclock"
+    )
 
 
-def test_run_case_cli_auto_discovers_real_gpio_function(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_case_cli_auto_discovers_real_gpio_function(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     from framework.platform.capabilities import GPIOCapability
 
     def fake_describe_pin(self, physical_pin):
@@ -478,11 +521,17 @@ def test_run_case_cli_auto_discovers_real_gpio_function(tmp_path: Path, monkeypa
 
     assert exit_code == 0
     assert payload["status"] == "passed"
-    assert payload["result"]["children"][0]["children"][0]["name"] == "test_gpio_mapping"
-    assert payload["result"]["children"][0]["children"][0]["details"]["logical_pin"] == 51
+    assert (
+        payload["result"]["children"][0]["children"][0]["name"] == "test_gpio_mapping"
+    )
+    assert (
+        payload["result"]["children"][0]["children"][0]["details"]["logical_pin"] == 51
+    )
 
 
-def test_run_case_cli_auto_discovers_real_i2c_function(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_case_cli_auto_discovers_real_i2c_function(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     from framework.platform.capabilities import I2CCapability
 
     def fake_scan_buses(self, buses=None):
@@ -517,7 +566,9 @@ def test_run_case_cli_auto_discovers_real_i2c_function(tmp_path: Path, monkeypat
     assert payload["result"]["children"][0]["children"][0]["metrics"]["bus_count"] >= 1
 
 
-def test_run_function_cli_imports_callable_and_executes(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_run_function_cli_imports_callable_and_executes(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     module_path = tmp_path / "sample_funcs.py"
     module_path.write_text(
         "def ping_once(target_ip, count=1):\n"

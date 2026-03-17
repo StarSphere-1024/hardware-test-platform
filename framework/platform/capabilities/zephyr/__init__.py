@@ -13,10 +13,10 @@ from .serial import ZephyrSerialCapability
 from .system_info import ZephyrSystemInfoCapability
 
 __all__ = [
-	"ZephyrGPIOCapability",
-	"ZephyrI2CCapability",
-	"ZephyrNetworkCapability",
-	"ZephyrRTCCapability",
-	"ZephyrSerialCapability",
-	"ZephyrSystemInfoCapability",
+    "ZephyrGPIOCapability",
+    "ZephyrI2CCapability",
+    "ZephyrNetworkCapability",
+    "ZephyrRTCCapability",
+    "ZephyrSerialCapability",
+    "ZephyrSystemInfoCapability",
 ]

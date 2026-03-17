@@ -13,20 +13,32 @@ class FixtureRunner:
         self.case_runner = CaseRunner()
 
     def build_plan(self, resolved_config: ResolvedExecutionConfig) -> ExecutionPlan:
-        fixture_name = resolved_config.fixture.fixture_name if resolved_config.fixture else "adhoc_case"
+        fixture_name = (
+            resolved_config.fixture.fixture_name
+            if resolved_config.fixture
+            else "adhoc_case"
+        )
         root_task = ExecutionTask(
             task_id=f"fixture.{fixture_name}",
             task_type="fixture",
             name=fixture_name,
-            execution_mode=resolved_config.resolved_runtime.get("execution", "sequential"),
+            execution_mode=resolved_config.resolved_runtime.get(
+                "execution", "sequential"
+            ),
             timeout=resolved_config.resolved_runtime.get("timeout"),
             retry_policy=RetryPolicy(
                 max_retries=resolved_config.resolved_runtime.get("retry", 0),
-                interval_seconds=resolved_config.resolved_runtime.get("retry_interval", 0),
+                interval_seconds=resolved_config.resolved_runtime.get(
+                    "retry_interval", 0
+                ),
             ),
-            stop_on_failure=bool(resolved_config.resolved_runtime.get("stop_on_failure", False)),
+            stop_on_failure=bool(
+                resolved_config.resolved_runtime.get("stop_on_failure", False)
+            ),
             payload={
-                "fixture": resolved_config.fixture.to_dict() if resolved_config.fixture else None,
+                "fixture": resolved_config.fixture.to_dict()
+                if resolved_config.fixture
+                else None,
                 "request": dict(resolved_config.request),
             },
         )

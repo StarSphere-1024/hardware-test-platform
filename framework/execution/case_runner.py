@@ -7,7 +7,9 @@ from framework.domain.execution import ExecutionTask, RetryPolicy
 
 
 class CaseRunner:
-    def build_case_task(self, case_spec: CaseSpec, *, parent_task_id: str | None = None, index: int = 0) -> tuple[ExecutionTask, list[ExecutionTask]]:
+    def build_case_task(
+        self, case_spec: CaseSpec, *, parent_task_id: str | None = None, index: int = 0
+    ) -> tuple[ExecutionTask, list[ExecutionTask]]:
         case_task_id = f"case.{index}.{case_spec.case_name}"
         case_task = ExecutionTask(
             task_id=case_task_id,
@@ -35,7 +37,9 @@ class CaseRunner:
         for function_index, function_spec in enumerate(case_spec.functions):
             if not function_spec.enabled:
                 continue
-            dependency_task_id = previous_task_id if case_spec.execution == "sequential" else None
+            dependency_task_id = (
+                previous_task_id if case_spec.execution == "sequential" else None
+            )
             function_tasks.append(
                 self._build_function_task(
                     function_spec,

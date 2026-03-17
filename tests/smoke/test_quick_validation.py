@@ -15,7 +15,9 @@ def _write_json(path: Path, payload: dict) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = True) -> None:
+def _patch_quick_validation_capabilities(
+    monkeypatch, *, eth_success: bool = True
+) -> None:
     from framework.platform.capabilities import (
         GPIOCapability,
         I2CCapability,
@@ -101,8 +103,15 @@ def _patch_quick_validation_capabilities(monkeypatch, *, eth_success: bool = Tru
     monkeypatch.setattr(I2CCapability, "scan_buses", fake_scan_buses)
 
 
-def _run_quick_validation(tmp_path: Path, capsys, *, stop_on_failure: bool = False) -> tuple[int, dict[str, object]]:
-    return _run_fixture(tmp_path, capsys, config="fixtures/linux_host_pc.json", stop_on_failure=stop_on_failure)
+def _run_quick_validation(
+    tmp_path: Path, capsys, *, stop_on_failure: bool = False
+) -> tuple[int, dict[str, object]]:
+    return _run_fixture(
+        tmp_path,
+        capsys,
+        config="fixtures/linux_host_pc.json",
+        stop_on_failure=stop_on_failure,
+    )
 
 
 def _run_fixture(
@@ -131,9 +140,7 @@ def _build_precheck_failure_workspace(workspace_root: Path) -> None:
     _write_json(
         workspace_root / "config" / "global_config.json",
         {
-            "product": {
-                "default_board_profile": "rk3576_missing_eth"
-            },
+            "product": {"default_board_profile": "rk3576_missing_eth"},
             "runtime": {
                 "default_timeout": 60,
                 "default_retry": 1,
@@ -150,10 +157,7 @@ def _build_precheck_failure_workspace(workspace_root: Path) -> None:
         {
             "profile_name": "rk3576_missing_eth",
             "platform": "linux",
-            "product": {
-                "sku": "RK3576_EVB",
-                "stage": "DVT"
-            },
+            "product": {"sku": "RK3576_EVB", "stage": "DVT"},
             "supported_cases": ["eth_case", "uart_case"],
             "interfaces": {
                 "uart": ["/dev/ttyS0"],
@@ -246,7 +250,10 @@ def test_quick_validation_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> 
     assert exit_code == 0
     assert payload["status"] == "passed"
     assert len(payload["result"]["children"]) == 4
-    assert [case_result["children"][0]["name"] for case_result in payload["result"]["children"]] == [
+    assert [
+        case_result["children"][0]["name"]
+        for case_result in payload["result"]["children"]
+    ] == [
         "test_eth_ping",
         "test_uart_loopback",
         "test_rtc_read",
@@ -275,12 +282,16 @@ def test_quick_validation_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> 
     json_report = next(path for path in report_paths if path.suffix == ".json")
     report_payload = json.loads(json_report.read_text(encoding="utf-8"))
     assert report_payload["request"]["target_name"] == "fixtures/linux_host_pc.json"
-    assert report_payload["config_snapshot"]["fixture"]["fixture_name"] == "linux_host_pc"
+    assert (
+        report_payload["config_snapshot"]["fixture"]["fixture_name"] == "linux_host_pc"
+    )
     assert report_payload["result_snapshot"]["current_status"] == "passed"
     assert report_payload["metadata"]["event_count"] == len(event_lines) - 1
 
 
-def test_quick_validation_fixture_stop_on_failure_smoke(tmp_path: Path, monkeypatch, capsys) -> None:
+def test_quick_validation_fixture_stop_on_failure_smoke(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
     _patch_quick_validation_capabilities(monkeypatch, eth_success=False)
 
     exit_code, payload = _run_quick_validation(tmp_path, capsys, stop_on_failure=True)
@@ -297,7 +308,10 @@ def test_quick_validation_fixture_stop_on_failure_smoke(tmp_path: Path, monkeypa
     assert case_results[0]["children"][0]["name"] == "test_eth_ping"
     assert case_results[0]["children"][0]["status"] == "failed"
     assert all(case_result["status"] == "aborted" for case_result in case_results[1:])
-    assert all(case_result["message"] == "aborted by stop_on_failure" for case_result in case_results[1:])
+    assert all(
+        case_result["message"] == "aborted by stop_on_failure"
+        for case_result in case_results[1:]
+    )
 
     snapshot_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
     assert snapshot_payload["fixture"]["name"] == "linux_host_pc"
@@ -307,9 +321,15 @@ def test_quick_validation_fixture_stop_on_failure_smoke(tmp_path: Path, monkeypa
 
     event_lines = event_log_path.read_text(encoding="utf-8").splitlines()
     events = [json.loads(line) for line in event_lines]
-    task_started = [entry for entry in events if entry["event"]["event_type"] == "task_started"]
-    task_finished = [entry for entry in events if entry["event"]["event_type"] == "task_finished"]
-    task_retried = [entry for entry in events if entry["event"]["event_type"] == "task_retried"]
+    task_started = [
+        entry for entry in events if entry["event"]["event_type"] == "task_started"
+    ]
+    task_finished = [
+        entry for entry in events if entry["event"]["event_type"] == "task_finished"
+    ]
+    task_retried = [
+        entry for entry in events if entry["event"]["event_type"] == "task_retried"
+    ]
     assert len(task_started) == 5
     assert len(task_finished) == 3
     assert len(task_retried) == 2
@@ -324,7 +344,10 @@ def test_quick_validation_fixture_stop_on_failure_smoke(tmp_path: Path, monkeypa
     assert report_payload["result_snapshot"]["current_status"] == "aborted"
     assert report_payload["root_result"]["status"] == "aborted"
     assert report_payload["root_result"]["children"][0]["status"] == "failed"
-    assert all(child["status"] == "aborted" for child in report_payload["root_result"]["children"][1:])
+    assert all(
+        child["status"] == "aborted"
+        for child in report_payload["root_result"]["children"][1:]
+    )
 
 
 def test_fixture_precheck_failure_smoke(tmp_path: Path, capsys) -> None:
@@ -350,7 +373,10 @@ def test_fixture_precheck_failure_smoke(tmp_path: Path, capsys) -> None:
     assert exit_code == 1
     assert payload["status"] == "aborted"
     case_results = payload["result"]["children"]
-    assert [case_result["name"] for case_result in case_results] == ["eth_case", "uart_case"]
+    assert [case_result["name"] for case_result in case_results] == [
+        "eth_case",
+        "uart_case",
+    ]
     assert case_results[0]["status"] == "failed"
     assert case_results[0]["message"] == "missing required interfaces: eth"
     assert case_results[0]["children"] == []
@@ -365,8 +391,12 @@ def test_fixture_precheck_failure_smoke(tmp_path: Path, capsys) -> None:
 
     event_lines = event_log_path.read_text(encoding="utf-8").splitlines()
     events = [json.loads(line) for line in event_lines]
-    task_started = [entry for entry in events if entry["event"]["event_type"] == "task_started"]
-    task_finished = [entry for entry in events if entry["event"]["event_type"] == "task_finished"]
+    task_started = [
+        entry for entry in events if entry["event"]["event_type"] == "task_started"
+    ]
+    task_finished = [
+        entry for entry in events if entry["event"]["event_type"] == "task_finished"
+    ]
     assert len(task_started) == 2
     assert len(task_finished) == 2
     assert all(entry["event"]["task_type"] != "function" for entry in task_started)
@@ -378,9 +408,14 @@ def test_fixture_precheck_failure_smoke(tmp_path: Path, capsys) -> None:
     json_report = next(path for path in report_paths if path.suffix == ".json")
     report_payload = json.loads(json_report.read_text(encoding="utf-8"))
     assert report_payload["request"]["target_name"] == "fixtures/precheck_failure.json"
-    assert report_payload["config_snapshot"]["fixture"]["fixture_name"] == "precheck_failure"
+    assert (
+        report_payload["config_snapshot"]["fixture"]["fixture_name"]
+        == "precheck_failure"
+    )
     assert report_payload["result_snapshot"]["current_status"] == "aborted"
-    assert report_payload["root_result"]["children"][0]["details"]["missing_interfaces"] == ["eth"]
+    assert report_payload["root_result"]["children"][0]["details"][
+        "missing_interfaces"
+    ] == ["eth"]
 
 
 def test_parallel_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -397,7 +432,10 @@ def test_parallel_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> None:
     assert exit_code == 0
     assert payload["status"] == "passed"
     assert payload["result"]["name"] == "linux_host_pc_parallel"
-    assert [case_result["name"] for case_result in payload["result"]["children"]] == ["eth_case", "uart_case"]
+    assert [case_result["name"] for case_result in payload["result"]["children"]] == [
+        "eth_case",
+        "uart_case",
+    ]
 
     snapshot_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
     assert snapshot_payload["fixture"]["name"] == "linux_host_pc_parallel"
@@ -405,7 +443,14 @@ def test_parallel_fixture_smoke(tmp_path: Path, monkeypatch, capsys) -> None:
 
     event_lines = event_log_path.read_text(encoding="utf-8").splitlines()
     events = [json.loads(line) for line in event_lines]
-    task_started = [entry for entry in events if entry["event"]["event_type"] == "task_started"]
-    case_started = [entry for entry in task_started if entry["event"]["task_type"] == "case"]
+    task_started = [
+        entry for entry in events if entry["event"]["event_type"] == "task_started"
+    ]
+    case_started = [
+        entry for entry in task_started if entry["event"]["task_type"] == "case"
+    ]
     assert len(case_started) == 2
-    assert {entry["event"]["task_name"] for entry in case_started} == {"eth_case", "uart_case"}
+    assert {entry["event"]["task_name"] for entry in case_started} == {
+        "eth_case",
+        "uart_case",
+    }

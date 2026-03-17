@@ -44,5 +44,7 @@ class EventStore:
             event_payload = payload.pop("event")
             event = ExecutionEvent(**event_payload)
             records.append(EventRecord(event=event, **payload))
-        self._sequence_by_request[request_id] = max((record.sequence for record in records), default=0)
+        self._sequence_by_request[request_id] = max(
+            (record.sequence for record in records), default=0
+        )
         return records

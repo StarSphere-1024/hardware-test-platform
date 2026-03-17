@@ -19,7 +19,10 @@ class ResultStore:
     def write_snapshot(self, snapshot: ResultSnapshot) -> Path:
         target = self.snapshot_path(snapshot.request_id)
         temp_path = target.with_suffix(target.suffix + ".tmp")
-        temp_path.write_text(json.dumps(snapshot.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
+        temp_path.write_text(
+            json.dumps(snapshot.to_dict(), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
         temp_path.replace(target)
         return target
 

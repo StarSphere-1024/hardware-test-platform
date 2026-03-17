@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from framework.execution.fixture_runner import FixtureRunner
 
@@ -18,13 +19,19 @@ from .common import (
 )
 
 
-def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable[..., Any]] | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    *,
+    function_registry: dict[str, Callable[..., Any]] | None = None,
+) -> int:
     parser = create_base_parser("Execute a fixture configuration")
     parser.add_argument("--config", required=True, help="fixture config path")
     args = parser.parse_args(argv)
     args = normalize_cli_args(args)
     try:
-        request = build_execution_request(args, target_type="fixture", target_name=args.config)
+        request = build_execution_request(
+            args, target_type="fixture", target_name=args.config
+        )
         resolved_config = build_fixture_resolved_config(args, request)
         plan = FixtureRunner().build_plan(resolved_config)
         payload = execute_plan(
@@ -37,6 +44,7 @@ def main(argv: list[str] | None = None, *, function_registry: dict[str, Callable
             dashboard_refresh_interval=args.dashboard_refresh,
             dashboard_start_monitor=not args.dashboard_no_monitor,
             dashboard_keep_open=args.dashboard_keep_open,
+            verbose_level=1 if args.verbose else 0,
         )
         print_payload(payload)
         return payload_exit_code(payload)

@@ -15,7 +15,11 @@ def test_uart_loopback(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
-    registry = capability_registry or getattr(execution_context, "capability_registry", None) or {}
+    registry = (
+        capability_registry
+        or getattr(execution_context, "capability_registry", None)
+        or {}
+    )
     serial = registry.get("serial")
     if serial is None:
         return {
@@ -24,12 +28,15 @@ def test_uart_loopback(
             "details": {"port": port, "payload": payload},
         }
 
-    result = serial.loopback_test(port, payload=payload, baudrate=baudrate, timeout=timeout)
+    result = serial.loopback_test(
+        port, payload=payload, baudrate=baudrate, timeout=timeout
+    )
     success = bool(result.get("success", False))
     return {
         "code": 0 if success else -1,
         "status": "passed" if success else "failed",
-        "message": result.get("message") or ("uart loopback ok" if success else "uart loopback failed"),
+        "message": result.get("message")
+        or ("uart loopback ok" if success else "uart loopback failed"),
         "details": {
             "port": result.get("port", port),
             "payload": result.get("payload", payload),

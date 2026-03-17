@@ -7,6 +7,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+import contextlib
 
 try:
     import psutil
@@ -64,24 +65,31 @@ class SystemMonitor:
 
     def _run_loop(self) -> None:
         while self._running:
-            try:
+            with contextlib.suppress(Exception):
                 self._write(self.collect())
-            except Exception:
-                pass
             if self._stop_event.wait(timeout=self.refresh_interval):
                 break
 
     def _write(self, data: dict[str, Any]) -> None:
-        self.output_file.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.output_file.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def _get_cpu_info(self) -> dict[str, Any]:
         if psutil is None:
-            return {"usage_percent": None, "frequency_mhz": None, "temperature": None, "cores": None}
+            return {
+                "usage_percent": None,
+                "frequency_mhz": None,
+                "temperature": None,
+                "cores": None,
+            }
         cpu_percent = psutil.cpu_percent(interval=0.1)
         cpu_freq = psutil.cpu_freq()
         return {
             "usage_percent": round(cpu_percent, 1),
-            "frequency_mhz": round(float(cpu_freq.current), 1) if cpu_freq and cpu_freq.current else None,
+            "frequency_mhz": round(float(cpu_freq.current), 1)
+            if cpu_freq and cpu_freq.current
+            else None,
             "temperature": self._get_cpu_temperature(),
             "cores": psutil.cpu_count(logical=True),
         }
@@ -100,14 +108,21 @@ class SystemMonitor:
         thermal_path = Path("/sys/class/thermal/thermal_zone0/temp")
         if thermal_path.exists():
             try:
-                return round(int(thermal_path.read_text(encoding="utf-8").strip()) / 1000.0, 1)
+                return round(
+                    int(thermal_path.read_text(encoding="utf-8").strip()) / 1000.0, 1
+                )
             except (OSError, ValueError):
                 return None
         return None
 
     def _get_memory_info(self) -> dict[str, Any]:
         if psutil is None:
-            return {"used_mb": None, "available_mb": None, "total_mb": None, "usage_percent": None}
+            return {
+                "used_mb": None,
+                "available_mb": None,
+                "total_mb": None,
+                "usage_percent": None,
+            }
         memory = psutil.virtual_memory()
         return {
             "used_mb": round(memory.used / (1024 * 1024), 1),
@@ -118,7 +133,12 @@ class SystemMonitor:
 
     def _get_storage_info(self) -> dict[str, Any]:
         if psutil is None:
-            return {"used_gb": None, "free_gb": None, "total_gb": None, "usage_percent": None}
+            return {
+                "used_gb": None,
+                "free_gb": None,
+                "total_gb": None,
+                "usage_percent": None,
+            }
         usage = psutil.disk_usage("/")
         return {
             "used_gb": round(usage.used / (1024 * 1024 * 1024), 1),
@@ -147,12 +167,16 @@ def get_monitor() -> SystemMonitor:
     return _monitor
 
 
-def start_monitoring(output_dir: str = "tmp", refresh_interval: float = 2.0) -> SystemMonitor:
+def start_monitoring(
+    output_dir: str = "tmp", refresh_interval: float = 2.0
+) -> SystemMonitor:
     global _monitor
     if _monitor is None or str(_monitor.output_dir) != str(Path(output_dir)):
         if _monitor is not None:
             _monitor.stop()
-        _monitor = SystemMonitor(output_dir=output_dir, refresh_interval=refresh_interval)
+        _monitor = SystemMonitor(
+            output_dir=output_dir, refresh_interval=refresh_interval
+        )
     _monitor.start()
     return _monitor
 

@@ -13,7 +13,11 @@ def test_i2c_scan(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
-    registry = capability_registry or getattr(execution_context, "capability_registry", None) or {}
+    registry = (
+        capability_registry
+        or getattr(execution_context, "capability_registry", None)
+        or {}
+    )
     i2c = registry.get("i2c")
     if i2c is None:
         return {
@@ -28,7 +32,12 @@ def test_i2c_scan(
     return {
         "code": 0 if success else -1,
         "status": "passed" if success else "failed",
-        "message": result.get("message") or (f"i2c scan ok, buses={result.get('bus_count', 0)}" if success else "i2c scan failed"),
+        "message": result.get("message")
+        or (
+            f"i2c scan ok, buses={result.get('bus_count', 0)}"
+            if success
+            else "i2c scan failed"
+        ),
         "details": {
             "requested_bus": bus,
             "scan_all": scan_all,

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import threading
 import time
 from datetime import datetime, timezone
 from queue import Queue
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from concurrent.futures import TimeoutError as FutureTimeoutError
 
@@ -18,23 +20,41 @@ from .errors import FunctionNotRegisteredError, TaskExecutionError
 
 
 class FunctionExecutor:
-    def __init__(self, function_registry: dict[str, Callable[..., Any]] | None = None) -> None:
+    def __init__(
+        self, function_registry: dict[str, Callable[..., Any]] | None = None
+    ) -> None:
         self.function_registry = dict(function_registry or {})
 
     def register(self, name: str, function: Callable[..., Any]) -> None:
         self.function_registry[name] = function
 
-    def execute(self, task: ExecutionTask, context: ExecutionContext) -> ExecutionResult:
+    def execute(
+        self, task: ExecutionTask, context: ExecutionContext
+    ) -> ExecutionResult:
+        logger = logging.getLogger("hardware_test_platform.function_executor")
+
         if task.task_type != "function":
-            raise TaskExecutionError(f"unsupported task type for FunctionExecutor: {task.task_type}")
+            raise TaskExecutionError(
+                f"unsupported task type for FunctionExecutor: {task.task_type}"
+            )
 
         function_name = task.payload.get("function_name") or task.name
         params = task.payload.get("params", {})
         if not isinstance(params, dict):
-            raise TaskExecutionError(f"function params must be a mapping: {function_name}")
+            raise TaskExecutionError(
+                f"function params must be a mapping: {function_name}"
+            )
 
         if function_name not in self.function_registry:
-            raise FunctionNotRegisteredError(f"function '{function_name}' is not registered")
+            raise FunctionNotRegisteredError(
+                f"function '{function_name}' is not registered"
+            )
+
+        logger.debug(
+            "FunctionExecutor.execute: executing function %s with params %s",
+            function_name,
+            params,
+        )
 
         started_at = datetime.now(timezone.utc)
         started_perf = time.perf_counter()
@@ -42,6 +62,10 @@ class FunctionExecutor:
 
         try:
             raw_result = self._invoke(callable_obj, params, task.timeout, context)
+            logger.debug(
+                "FunctionExecutor.execute: function %s returned raw result",
+                function_name,
+            )
             status, code, message, details, metrics = self._normalize_result(raw_result)
             status, code, message, details = self._apply_expectations(
                 task.payload.get("expect"),
@@ -52,6 +76,11 @@ class FunctionExecutor:
                 metrics=metrics,
             )
         except FutureTimeoutError:
+            logger.debug(
+                "FunctionExecutor.execute: function %s timed out after %ss",
+                function_name,
+                task.timeout,
+            )
             finished_at = datetime.now(timezone.utc)
             return ExecutionResult(
                 task_id=task.task_id,
@@ -73,6 +102,11 @@ class FunctionExecutor:
                 },
             )
         except Exception as error:
+            logger.debug(
+                "FunctionExecutor.execute: function %s raised exception: %s",
+                function_name,
+                error,
+            )
             finished_at = datetime.now(timezone.utc)
             return ExecutionResult(
                 task_id=task.task_id,
@@ -87,6 +121,11 @@ class FunctionExecutor:
                 details={"params": dict(params)},
             )
 
+        logger.debug(
+            "FunctionExecutor.execute: function %s completed with status %s",
+            function_name,
+            status,
+        )
         finished_at = datetime.now(timezone.utc)
         return ExecutionResult(
             task_id=task.task_id,
@@ -109,7 +148,12 @@ class FunctionExecutor:
         timeout: int | None,
         context: ExecutionContext,
     ) -> Any:
+        logger = logging.getLogger("hardware_test_platform.function_executor")
         invocation_params = self._build_invocation_params(callable_obj, params, context)
+        logger.debug(
+            "FunctionExecutor._invoke: calling function with params %s",
+            invocation_params,
+        )
         if timeout is None:
             return callable_obj(**invocation_params)
 
@@ -118,11 +162,14 @@ class FunctionExecutor:
         def runner() -> None:
             try:
                 result_queue.put(("result", callable_obj(**invocation_params)))
-            except Exception as error:  # noqa: BLE001
+            except Exception as error:
                 result_queue.put(("error", error))
 
         worker = threading.Thread(target=runner, daemon=True)
         worker.start()
+        logger.debug(
+            "FunctionExecutor._invoke: started worker thread with timeout %ss", timeout
+        )
         worker.join(timeout=timeout)
 
         if worker.is_alive():
@@ -145,18 +192,29 @@ class FunctionExecutor:
         except (TypeError, ValueError):
             return invocation_params
 
-        if "execution_context" in signature.parameters and "execution_context" not in invocation_params:
+        if (
+            "execution_context" in signature.parameters
+            and "execution_context" not in invocation_params
+        ):
             invocation_params["execution_context"] = context
-        if "capability_registry" in signature.parameters and "capability_registry" not in invocation_params:
+        if (
+            "capability_registry" in signature.parameters
+            and "capability_registry" not in invocation_params
+        ):
             invocation_params["capability_registry"] = context.capability_registry
-        if "adapter_registry" in signature.parameters and "adapter_registry" not in invocation_params:
+        if (
+            "adapter_registry" in signature.parameters
+            and "adapter_registry" not in invocation_params
+        ):
             invocation_params["adapter_registry"] = context.adapter_registry
         return invocation_params
 
     def _normalize_result(
         self,
         raw_result: Any,
-    ) -> tuple[ResultStatus, int | None, str | None, dict[str, Any], dict[str, float | int]]:
+    ) -> tuple[
+        ResultStatus, int | None, str | None, dict[str, Any], dict[str, float | int]
+    ]:
         if raw_result is None:
             return ResultStatus.PASSED, 0, "success", {}, {}
 
@@ -184,7 +242,9 @@ class FunctionExecutor:
                 status = ResultStatus.PASSED
 
             if message is None:
-                message = "success" if status == ResultStatus.PASSED else "function failed"
+                message = (
+                    "success" if status == ResultStatus.PASSED else "function failed"
+                )
             return status, code, message, details, metrics
 
         return ResultStatus.PASSED, 0, "success", {"result": raw_result}, {}
@@ -199,6 +259,8 @@ class FunctionExecutor:
         details: dict[str, Any],
         metrics: dict[str, float | int],
     ) -> tuple[ResultStatus, int | None, str | None, dict[str, Any]]:
+        logger = logging.getLogger("hardware_test_platform.function_executor")
+
         if not expect:
             return status, code, message, details
 
@@ -206,7 +268,14 @@ class FunctionExecutor:
         if not isinstance(rules, list) or not rules:
             return status, code, message, details
 
-        pass_policy = expect.get("pass_policy", "all") if isinstance(expect, dict) else "all"
+        logger.debug(
+            "FunctionExecutor._apply_expectations: evaluating %d expect rules",
+            len(rules),
+        )
+
+        pass_policy = (
+            expect.get("pass_policy", "all") if isinstance(expect, dict) else "all"
+        )
         rule_results: list[dict[str, Any]] = []
 
         for rule in rules:
@@ -224,6 +293,12 @@ class FunctionExecutor:
                 metrics=metrics,
             )
             passed = self._evaluate_expectation(operator, actual_value, expected_value)
+            logger.debug(
+                "FunctionExecutor._apply_expectations: rule field=%s operator=%s passed=%s",
+                field_path,
+                operator,
+                passed,
+            )
             rule_results.append(
                 {
                     "field": field_path,
@@ -238,21 +313,33 @@ class FunctionExecutor:
         if not rule_results:
             return status, code, message, details
 
-        expectations_met = any(item["passed"] for item in rule_results) if pass_policy == "any" else all(
-            item["passed"] for item in rule_results
+        expectations_met = (
+            any(item["passed"] for item in rule_results)
+            if pass_policy == "any"
+            else all(item["passed"] for item in rule_results)
         )
         if expectations_met:
+            logger.debug("FunctionExecutor._apply_expectations: all expectations met")
             details_with_expect = dict(details)
             details_with_expect["expectation_results"] = rule_results
             return status, code, message, details_with_expect
 
-        failure_messages = [item.get("message") for item in rule_results if not item["passed"] and item.get("message")]
+        failure_messages = [
+            item.get("message")
+            for item in rule_results
+            if not item["passed"] and item.get("message")
+        ]
         details_with_expect = dict(details)
         details_with_expect["expectation_results"] = rule_results
+        logger.debug(
+            "FunctionExecutor._apply_expectations: expectations not met, failing"
+        )
         return (
             ResultStatus.FAILED,
             code if code not in (None, 0) else -1,
-            "; ".join(str(msg) for msg in failure_messages if msg) if failure_messages else "function result did not satisfy expect rules",
+            "; ".join(str(msg) for msg in failure_messages if msg)
+            if failure_messages
+            else "function result did not satisfy expect rules",
             details_with_expect,
         )
 

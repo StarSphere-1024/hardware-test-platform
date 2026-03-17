@@ -23,7 +23,9 @@ class ResourceLockManager:
     ) -> dict[str, Any]:
         normalized_resources = self._normalize_resources(resources)
         started_perf = time.perf_counter()
-        deadline = None if timeout_seconds is None else started_perf + max(timeout_seconds, 0)
+        deadline = (
+            None if timeout_seconds is None else started_perf + max(timeout_seconds, 0)
+        )
 
         while True:
             blocked_resource: str | None = None
@@ -37,7 +39,10 @@ class ResourceLockManager:
                     entry = self._entry(resource)
                     quarantine_until_perf = entry.get("quarantine_until_perf")
                     owner = entry.get("owner_task_id")
-                    if quarantine_until_perf is not None and quarantine_until_perf > now_perf:
+                    if (
+                        quarantine_until_perf is not None
+                        and quarantine_until_perf > now_perf
+                    ):
                         blocked_resource = resource
                         blocked_reason = "quarantine"
                         sleep_seconds = max(quarantine_until_perf - now_perf, 0.01)
@@ -55,7 +60,9 @@ class ResourceLockManager:
                         entry["owner_task_id"] = owner_task_id
                         entry["owner_attempt"] = owner_attempt
                         entry["acquired_at"] = acquired_at
-                        entry["last_wait_ms"] = int((time.perf_counter() - started_perf) * 1000)
+                        entry["last_wait_ms"] = int(
+                            (time.perf_counter() - started_perf) * 1000
+                        )
                     return {
                         "acquired": True,
                         "resources": normalized_resources,
@@ -98,7 +105,9 @@ class ResourceLockManager:
         quarantine_until = None
         quarantine_until_perf = None
         if quarantine_seconds > 0:
-            quarantine_until = (released_at + timedelta(seconds=quarantine_seconds)).isoformat()
+            quarantine_until = (
+                released_at + timedelta(seconds=quarantine_seconds)
+            ).isoformat()
             quarantine_until_perf = time.perf_counter() + quarantine_seconds
 
         with self._mutex:

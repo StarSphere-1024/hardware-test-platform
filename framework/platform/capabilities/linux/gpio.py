@@ -34,7 +34,9 @@ class LinuxGPIOCapability(GPIOCapabilityContract):
             "chips": chips,
             "available": available,
             "success": available,
-            "error_type": None if available else ("mapping_not_found" if logical_pin is None else "device_not_found"),
+            "error_type": None
+            if available
+            else ("mapping_not_found" if logical_pin is None else "device_not_found"),
             "message": (
                 f"gpio mapping ok for physical pin {physical_pin}"
                 if available

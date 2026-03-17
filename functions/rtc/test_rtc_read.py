@@ -12,7 +12,11 @@ def test_rtc_read(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
-    registry = capability_registry or getattr(execution_context, "capability_registry", None) or {}
+    registry = (
+        capability_registry
+        or getattr(execution_context, "capability_registry", None)
+        or {}
+    )
     rtc = registry.get("rtc")
     if rtc is None:
         return {
@@ -30,7 +34,8 @@ def test_rtc_read(
     return {
         "code": 0 if success else -1,
         "status": "passed" if success else "failed",
-        "message": result.get("message") or (f"rtc read ok on {result.get('device')}" if success else "rtc read failed"),
+        "message": result.get("message")
+        or (f"rtc read ok on {result.get('device')}" if success else "rtc read failed"),
         "details": {
             "rtc_device": result.get("device", rtc_device),
             "time": time_iso,

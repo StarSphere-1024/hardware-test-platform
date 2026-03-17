@@ -27,7 +27,9 @@ class ReportGenerator:
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         sku = resolved_config.board_profile.product.sku or "UNKNOWN"
         suffix = str(root_result.status)
-        base_name = f"{sku}_{snapshot.request_id}_{timestamp}_{suffix}".replace("/", "_")
+        base_name = f"{sku}_{snapshot.request_id}_{timestamp}_{suffix}".replace(
+            "/", "_"
+        )
         text_path = self.reports_dir / f"{base_name}.report"
         json_path = self.reports_dir / f"{base_name}.report.json"
 
@@ -44,14 +46,29 @@ class ReportGenerator:
         }
         text_content = self._build_text_report(root_result, snapshot, events)
         text_path.write_text(text_content, encoding="utf-8")
-        json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        json_path.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
 
         return [
-            ReportArtifact(artifact_type="text-report", uri=str(text_path), content_type="text/plain"),
-            ReportArtifact(artifact_type="json-report", uri=str(json_path), content_type="application/json"),
+            ReportArtifact(
+                artifact_type="text-report",
+                uri=str(text_path),
+                content_type="text/plain",
+            ),
+            ReportArtifact(
+                artifact_type="json-report",
+                uri=str(json_path),
+                content_type="application/json",
+            ),
         ]
 
-    def _build_text_report(self, root_result: ExecutionResult, snapshot: ResultSnapshot, events: list[EventRecord]) -> str:
+    def _build_text_report(
+        self,
+        root_result: ExecutionResult,
+        snapshot: ResultSnapshot,
+        events: list[EventRecord],
+    ) -> str:
         lines = [
             "Hardware Test Platform Report",
             f"request_id: {snapshot.request_id}",
@@ -63,11 +80,13 @@ class ReportGenerator:
         ]
         for key, value in sorted(snapshot.counters.items()):
             lines.append(f"- {key}: {value}")
-        lines.extend([
-            "",
-            f"Root Result: {root_result.name} ({root_result.task_type}) -> {root_result.status}",
-            f"Message: {root_result.message or ''}",
-        ])
+        lines.extend(
+            [
+                "",
+                f"Root Result: {root_result.name} ({root_result.task_type}) -> {root_result.status}",
+                f"Message: {root_result.message or ''}",
+            ]
+        )
         residual_risks = self._collect_residual_risks(root_result)
         if residual_risks:
             lines.extend(["", "Residual Risks:"])
@@ -75,7 +94,9 @@ class ReportGenerator:
                 lines.append(f"- {item['task_name']}: {item['message']}")
         return "\n".join(lines) + "\n"
 
-    def _collect_residual_risks(self, root_result: ExecutionResult) -> list[dict[str, str]]:
+    def _collect_residual_risks(
+        self, root_result: ExecutionResult
+    ) -> list[dict[str, str]]:
         residual_risks: list[dict[str, str]] = []
 
         def visit(result: ExecutionResult) -> None:
@@ -85,7 +106,9 @@ class ReportGenerator:
                     residual_risks.append(
                         {
                             "task_name": result.name,
-                            "message": str(risk.get("message") or "residual risk recorded"),
+                            "message": str(
+                                risk.get("message") or "residual risk recorded"
+                            ),
                         }
                     )
             for child in result.children:

@@ -120,7 +120,11 @@ class DashboardDataSource:
         if not path.exists():
             return {
                 "platform": "linux",
-                "cpu": {"usage_percent": None, "temperature": None, "frequency_mhz": None},
+                "cpu": {
+                    "usage_percent": None,
+                    "temperature": None,
+                    "frequency_mhz": None,
+                },
                 "memory": {"used_mb": None, "total_mb": None, "usage_percent": None},
                 "storage": {"used_gb": None, "total_gb": None, "usage_percent": None},
             }
@@ -140,7 +144,10 @@ class DashboardDataSource:
                 payload = json.loads(candidate.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
                 continue
-            if payload.get("fixture_name") == fixture_name or candidate.stem == fixture_name:
+            if (
+                payload.get("fixture_name") == fixture_name
+                or candidate.stem == fixture_name
+            ):
                 return payload
         return {}
 
@@ -152,7 +159,7 @@ class DashboardDataSource:
             lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
         except OSError as error:
             return [f"Read log failed: {error}"]
-        return [f"File: {path.name}"] + lines[-limit:]
+        return [f"File: {path.name}", *lines[-limit:]]
 
     def has_report(self, request_id: str | None) -> bool:
         if not self.reports_dir.exists():
@@ -165,14 +172,22 @@ class DashboardDataSource:
         if request_id:
             path = self.tmp_dir / f"{request_id}_snapshot.json"
             return path if path.exists() else None
-        candidates = sorted(self.tmp_dir.glob("*_snapshot.json"), key=lambda item: item.stat().st_mtime, reverse=True)
+        candidates = sorted(
+            self.tmp_dir.glob("*_snapshot.json"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
         return candidates[0] if candidates else None
 
     def _select_log_path(self, request_id: str | None) -> Path | None:
         if request_id:
             path = self.logs_dir / f"{request_id}.log"
             return path if path.exists() else None
-        candidates = sorted(self.logs_dir.glob("*.log"), key=lambda item: item.stat().st_mtime, reverse=True)
+        candidates = sorted(
+            self.logs_dir.glob("*.log"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
         return candidates[0] if candidates else None
 
 
@@ -251,8 +266,9 @@ class CLIDashboard:
 
     def _run_live_display(self) -> None:
         try:
-            with _TerminalInput() as terminal_input:
-                with Live(
+            with (
+                _TerminalInput() as terminal_input,
+                Live(
                     self._generate_layout(),
                     refresh_per_second=max(1, int(1 / max(0.2, self.refresh_interval))),
                     screen=True,
@@ -260,19 +276,20 @@ class CLIDashboard:
                     redirect_stdout=False,
                     redirect_stderr=False,
                     console=self.console,
-                ) as live:
-                    while self._running:
-                        key = terminal_input.read_key()
-                        self._handle_key(key)
-                        if not self._running:
-                            break
-                        layout = self._generate_layout()
-                        self._update_auto_exit_state()
-                        live.update(layout, refresh=True)
-                        if self._pending_snapshot:
-                            self._save_snapshot(layout)
-                            self._pending_snapshot = False
-                        time.sleep(self.refresh_interval)
+                ) as live,
+            ):
+                while self._running:
+                    key = terminal_input.read_key()
+                    self._handle_key(key)
+                    if not self._running:
+                        break
+                    layout = self._generate_layout()
+                    self._update_auto_exit_state()
+                    live.update(layout, refresh=True)
+                    if self._pending_snapshot:
+                        self._save_snapshot(layout)
+                        self._pending_snapshot = False
+                    time.sleep(self.refresh_interval)
         finally:
             self.stop()
             self.console.show_cursor(True)
@@ -303,7 +320,9 @@ class CLIDashboard:
             if linger_seconds is None:
                 self._completed_at = None
                 self._completed_status = status
-                self._last_action = f"execution completed: {status}, waiting for manual quit"
+                self._last_action = (
+                    f"execution completed: {status}, waiting for manual quit"
+                )
                 return
             if self._completed_at is None or self._completed_status != status:
                 self._completed_at = datetime.now()
@@ -356,7 +375,9 @@ class CLIDashboard:
         if not self._fixture_name:
             self._fixture_name = str(snapshot.get("fixture", {}).get("name", ""))
             if self._fixture_name and not self._fixture_config:
-                self._fixture_config = self.data_source.load_fixture_config(self._fixture_name)
+                self._fixture_config = self.data_source.load_fixture_config(
+                    self._fixture_name
+                )
 
         cases = list(snapshot.get("cases", []))
         events = self.data_source.read_events(self._request_id or None)
@@ -370,8 +391,18 @@ class CLIDashboard:
             "skipped": sum(1 for case in cases if case.get("status") == "skipped"),
         }
         total = len(cases)
-        retry_count = sum(1 for item in events if item.get("event", {}).get("event_type") == "task_retried")
-        completed_count = counts["passed"] + counts["failed"] + counts["timeout"] + counts["aborted"] + counts["skipped"]
+        retry_count = sum(
+            1
+            for item in events
+            if item.get("event", {}).get("event_type") == "task_retried"
+        )
+        completed_count = (
+            counts["passed"]
+            + counts["failed"]
+            + counts["timeout"]
+            + counts["aborted"]
+            + counts["skipped"]
+        )
         wait_count = max(total - completed_count - counts["running"], 0)
         pass_rate = counts["passed"] / total * 100.0 if total else 0.0
         return {
@@ -465,19 +496,25 @@ class CLIDashboard:
         if not lines:
             for case in state["cases"]:
                 if case.get("status") in {"failed", "aborted", "timeout"}:
-                    lines.append(f"{case.get('name')}: {case.get('message') or case.get('status')}")
+                    lines.append(
+                        f"{case.get('name')}: {case.get('message') or case.get('status')}"
+                    )
         if not lines:
             for event in reversed(state["events"]):
                 event_payload = event.get("event", {})
                 if event_payload.get("status") == "error":
-                    lines.append(f"{event_payload.get('task_name')}: {event_payload.get('message')}")
+                    lines.append(
+                        f"{event_payload.get('task_name')}: {event_payload.get('message')}"
+                    )
                 if len(lines) >= 3:
                     break
         if not lines:
             lines = ["No recent failures"]
         return Panel("\n".join(lines[:3]), title="Recent Failures")
 
-    def _recent_failure_lines_from_snapshot(self, snapshot: dict[str, Any]) -> list[str]:
+    def _recent_failure_lines_from_snapshot(
+        self, snapshot: dict[str, Any]
+    ) -> list[str]:
         lines: list[str] = []
         for case_result in self._extract_case_results(snapshot):
             if case_result.get("status") not in {"failed", "aborted", "timeout"}:
@@ -485,13 +522,23 @@ class CLIDashboard:
             detailed_failure = self._first_failed_leaf(case_result)
             if detailed_failure is None:
                 case_name = str(case_result.get("name", "unknown"))
-                case_message = str(case_result.get("message") or case_result.get("status") or "failed")
+                case_message = str(
+                    case_result.get("message") or case_result.get("status") or "failed"
+                )
                 lines.append(f"{case_name}: {case_message}")
                 continue
 
             case_name = str(case_result.get("name", "unknown"))
-            failure_name = str(detailed_failure.get("name") or detailed_failure.get("task_id") or "task")
-            failure_message = str(detailed_failure.get("message") or detailed_failure.get("status") or "failed")
+            failure_name = str(
+                detailed_failure.get("name")
+                or detailed_failure.get("task_id")
+                or "task"
+            )
+            failure_message = str(
+                detailed_failure.get("message")
+                or detailed_failure.get("status")
+                or "failed"
+            )
             lines.append(f"{case_name} / {failure_name}: {failure_message}")
         return lines
 
@@ -504,7 +551,9 @@ class CLIDashboard:
             (
                 item
                 for item in results
-                if isinstance(item, dict) and item.get("task_type") == "fixture" and isinstance(item.get("children"), list)
+                if isinstance(item, dict)
+                and item.get("task_type") == "fixture"
+                and isinstance(item.get("children"), list)
             ),
             None,
         )
@@ -531,7 +580,11 @@ class CLIDashboard:
     def _first_failed_leaf(self, result: dict[str, Any]) -> dict[str, Any] | None:
         children = result.get("children")
         if not isinstance(children, list) or not children:
-            return result if result.get("status") in {"failed", "aborted", "timeout"} else None
+            return (
+                result
+                if result.get("status") in {"failed", "aborted", "timeout"}
+                else None
+            )
 
         for child in children:
             if not isinstance(child, dict):
@@ -562,7 +615,12 @@ class CLIDashboard:
         return Layout(Panel(text, title="Debug"))
 
     def _create_logs_panel(self) -> Layout:
-        return Layout(Panel("\n".join(self.data_source.read_log_lines(self._request_id or None)), title="Logs"))
+        return Layout(
+            Panel(
+                "\n".join(self.data_source.read_log_lines(self._request_id or None)),
+                title="Logs",
+            )
+        )
 
     def _save_snapshot(self, layout_obj: Any) -> None:
         self.reports_dir.mkdir(parents=True, exist_ok=True)
@@ -570,7 +628,9 @@ class CLIDashboard:
         request_id = self._request_id or "dashboard"
         path = self.reports_dir / f"dashboard_{request_id}_{timestamp}.txt"
         try:
-            temp_console = Console(width=self.console.size.width, record=True, force_terminal=False)
+            temp_console = Console(
+                width=self.console.size.width, record=True, force_terminal=False
+            )
             temp_console.print(layout_obj)
             path.write_text(temp_console.export_text(clear=False), encoding="utf-8")
             self._last_action = f"snapshot saved: {path.name}"
@@ -613,15 +673,22 @@ class CLIDashboard:
             return None
 
         case_key = self._case_timer_key(case)
-        observed_elapsed_ms = max((datetime.now(started_at.tzinfo) - started_at).total_seconds() * 1000, 0.0)
+        observed_elapsed_ms = max(
+            (datetime.now(started_at.tzinfo) - started_at).total_seconds() * 1000, 0.0
+        )
         current_monotonic = time.monotonic()
         baseline = self._running_case_timers.get(case_key)
         if baseline is None:
-            self._running_case_timers[case_key] = (observed_elapsed_ms, current_monotonic)
+            self._running_case_timers[case_key] = (
+                observed_elapsed_ms,
+                current_monotonic,
+            )
             return observed_elapsed_ms
 
         baseline_elapsed_ms, baseline_monotonic = baseline
-        return max(baseline_elapsed_ms + (current_monotonic - baseline_monotonic) * 1000, 0.0)
+        return max(
+            baseline_elapsed_ms + (current_monotonic - baseline_monotonic) * 1000, 0.0
+        )
 
     def _case_timer_key(self, case: dict[str, Any]) -> str:
         name = str(case.get("name") or "unknown")

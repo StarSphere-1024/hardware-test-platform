@@ -1,9 +1,21 @@
 """Domain contracts used by configuration, execution and observability layers."""
 
 from .events import EventRecord, EventStatus, EventType, ExecutionEvent
-from .execution import ArtifactDirectories, ExecutionContext, ExecutionPlan, ExecutionTask, RetryPolicy
+from .execution import (
+    ArtifactDirectories,
+    ExecutionContext,
+    ExecutionPlan,
+    ExecutionTask,
+    RetryPolicy,
+)
 from .requests import ExecutionRequest
-from .results import DashboardSnapshot, ExecutionResult, ReportArtifact, ResultSnapshot, ResultStatus
+from .results import (
+    DashboardSnapshot,
+    ExecutionResult,
+    ReportArtifact,
+    ResultSnapshot,
+    ResultStatus,
+)
 from .specs import CaseSpec, FixtureSpec, FunctionInvocationSpec
 
 __all__ = [

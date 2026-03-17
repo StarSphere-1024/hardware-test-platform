@@ -10,7 +10,10 @@ from ..base import NetworkCapabilityContract
 
 class LinuxNetworkCapability(NetworkCapabilityContract):
     def list_interfaces(self, *, include_loopback: bool = False) -> list[str]:
-        interfaces = [path.rsplit("/", 1)[-1] for path in self.adapter._list_paths("/sys/class/net/*")]
+        interfaces = [
+            path.rsplit("/", 1)[-1]
+            for path in self.adapter._list_paths("/sys/class/net/*")
+        ]
         if include_loopback:
             return interfaces
         return [name for name in interfaces if name != "lo"]
@@ -23,12 +26,21 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
                 return candidate
         return None
 
-    def ping(self, target_ip: str, *, interface: str | None = None, count: int = 1, timeout: int = 5) -> dict[str, Any]:
+    def ping(
+        self,
+        target_ip: str,
+        *,
+        interface: str | None = None,
+        count: int = 1,
+        timeout: int = 5,
+    ) -> dict[str, Any]:
         command = ["ping", "-c", str(count), "-W", str(timeout)]
         if interface:
             command.extend(["-I", interface])
         command.append(target_ip)
-        result = self.adapter.execute(command, timeout=max(timeout * count, timeout + 1))
+        result = self.adapter.execute(
+            command, timeout=max(timeout * count, timeout + 1)
+        )
         stdout = result.stdout or ""
         stderr = result.stderr or ""
         packet_loss = self._parse_packet_loss(stdout)
@@ -57,7 +69,11 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
             return [item for item in value if isinstance(item, str)]
         if isinstance(value, dict):
             items = value.get("items")
-            return [item for item in items if isinstance(item, str)] if isinstance(items, list) else []
+            return (
+                [item for item in items if isinstance(item, str)]
+                if isinstance(items, list)
+                else []
+            )
         return []
 
     def _parse_packet_loss(self, output: str) -> float:
@@ -67,7 +83,9 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
         return 100.0 if output else 0.0
 
     def _parse_average_latency(self, output: str) -> float:
-        match = re.search(r"(?:rtt|round-trip) min/avg/max(?:/mdev)? = [\d.]+/([\d.]+)/", output)
+        match = re.search(
+            r"(?:rtt|round-trip) min/avg/max(?:/mdev)? = [\d.]+/([\d.]+)/", output
+        )
         if match:
             return float(match.group(1))
         return 0.0

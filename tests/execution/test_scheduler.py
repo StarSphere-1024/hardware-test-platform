@@ -69,13 +69,22 @@ def test_scheduler_runs_fixture_sequentially_and_aggregates_results() -> None:
         "test_eth_ping": lambda interface, target_ip: {
             "code": 0,
             "message": f"ping {target_ip} via {interface}",
-            "details": {"interface": interface, "target_ip": target_ip, "success": True},
+            "details": {
+                "interface": interface,
+                "target_ip": target_ip,
+                "success": True,
+            },
             "metrics": {"avg_latency_ms": 1.5},
         },
         "test_uart_loopback": lambda port, baudrate, payload: {
             "code": 0,
             "message": f"loopback ok on {port}",
-            "details": {"port": port, "baudrate": baudrate, "payload": payload, "received": payload},
+            "details": {
+                "port": port,
+                "baudrate": baudrate,
+                "payload": payload,
+                "received": payload,
+            },
         },
         "test_rtc_read": lambda rtc_device: {
             "code": 0,
@@ -95,7 +104,9 @@ def test_scheduler_runs_fixture_sequentially_and_aggregates_results() -> None:
         },
     }
 
-    result = Scheduler(FunctionExecutor(registry)).run(plan, _build_context(resolved_config))
+    result = Scheduler(FunctionExecutor(registry)).run(
+        plan, _build_context(resolved_config)
+    )
 
     assert result.status == ResultStatus.PASSED
     assert len(result.children) == 4
@@ -103,7 +114,9 @@ def test_scheduler_runs_fixture_sequentially_and_aggregates_results() -> None:
     assert result.children[1].children[0].details["port"] == "/dev/ttyUSB0"
     assert result.children[3].children[0].details["bus"] == "/dev/i2c-0"
     assert result.children[0].children[0].details["resource_lock"]["acquired"] is True
-    assert result.children[0].children[0].details["resource_lock"]["resources"] == ["interface:eth:eno1"]
+    assert result.children[0].children[0].details["resource_lock"]["resources"] == [
+        "interface:eth:eno1"
+    ]
 
 
 def test_scheduler_retries_failed_function_until_success() -> None:
@@ -128,7 +141,9 @@ def test_scheduler_retries_failed_function_until_success() -> None:
             "details": {"target_ip": target_ip, "success": True},
         }
 
-    result = Scheduler(FunctionExecutor({"test_eth_ping": flaky_test})).run(plan, _build_context(resolved_config))
+    result = Scheduler(FunctionExecutor({"test_eth_ping": flaky_test})).run(
+        plan, _build_context(resolved_config)
+    )
     function_result = result.children[0].children[0]
 
     assert result.status == ResultStatus.PASSED
@@ -142,9 +157,7 @@ def test_scheduler_marks_timeout_and_honors_stop_on_failure() -> None:
     timeout_case = copy.deepcopy(resolved_config.cases[0])
     timeout_case.stop_on_failure = True
     timeout_case.functions[0].timeout = 0
-    timeout_case.functions.append(
-        copy.deepcopy(timeout_case.functions[0])
-    )
+    timeout_case.functions.append(copy.deepcopy(timeout_case.functions[0]))
     timeout_case.functions[1].name = "test_eth_second"
     timeout_case.functions[1].timeout = 1
     resolved_config.cases = [timeout_case]
@@ -153,20 +166,31 @@ def test_scheduler_marks_timeout_and_honors_stop_on_failure() -> None:
 
     def slow_test(interface, target_ip):
         time.sleep(0.05)
-        return {"code": 0, "message": f"slow success on {interface}", "details": {"target_ip": target_ip}}
+        return {
+            "code": 0,
+            "message": f"slow success on {interface}",
+            "details": {"target_ip": target_ip},
+        }
 
     registry = {
         "test_eth_ping": slow_test,
-        "test_eth_second": lambda interface, target_ip: {"code": 0, "message": "should not run"},
+        "test_eth_second": lambda interface, target_ip: {
+            "code": 0,
+            "message": "should not run",
+        },
     }
 
-    result = Scheduler(FunctionExecutor(registry)).run(plan, _build_context(resolved_config))
+    result = Scheduler(FunctionExecutor(registry)).run(
+        plan, _build_context(resolved_config)
+    )
     case_result = result.children[0]
 
     assert result.status == ResultStatus.TIMEOUT
     assert case_result.children[0].status == ResultStatus.TIMEOUT
     assert case_result.children[1].status == ResultStatus.ABORTED
-    assert case_result.children[0].details["resource_lock"]["quarantine_until"] is not None
+    assert (
+        case_result.children[0].details["resource_lock"]["quarantine_until"] is not None
+    )
 
 
 def test_scheduler_waits_for_quarantined_resource_before_running() -> None:
@@ -216,7 +240,11 @@ def test_scheduler_releases_resource_owner_after_timeout() -> None:
     plan = FixtureRunner().build_plan(resolved_config)
     context = _build_context(resolved_config)
 
-    result = Scheduler(FunctionExecutor({"test_eth_ping": lambda interface, target_ip: time.sleep(0.05)})).run(plan, context)
+    result = Scheduler(
+        FunctionExecutor(
+            {"test_eth_ping": lambda interface, target_ip: time.sleep(0.05)}
+        )
+    ).run(plan, context)
     entry = context.resource_locks["interface:eth:eno1"]
 
     assert result.status == ResultStatus.TIMEOUT
@@ -230,8 +258,14 @@ def test_scheduler_runs_parallel_cases_when_resources_do_not_conflict() -> None:
     resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     resolved_config.fixture.execution = "parallel"
     resolved_config.resolved_runtime["execution"] = "parallel"
-    resolved_config.cases = [copy.deepcopy(resolved_config.cases[0]), copy.deepcopy(resolved_config.cases[1])]
-    resolved_config.fixture.cases = ["cases/linux_host_pc/eth_case.json", "cases/linux_host_pc/uart_case.json"]
+    resolved_config.cases = [
+        copy.deepcopy(resolved_config.cases[0]),
+        copy.deepcopy(resolved_config.cases[1]),
+    ]
+    resolved_config.fixture.cases = [
+        "cases/linux_host_pc/eth_case.json",
+        "cases/linux_host_pc/uart_case.json",
+    ]
     plan = FixtureRunner().build_plan(resolved_config)
 
     start_times: dict[str, float] = {}
@@ -259,7 +293,9 @@ def test_scheduler_runs_parallel_cases_when_resources_do_not_conflict() -> None:
     registry = {"test_eth_ping": eth_runner, "test_uart_loopback": uart_runner}
 
     started = time.perf_counter()
-    result = Scheduler(FunctionExecutor(registry)).run(plan, _build_context(resolved_config))
+    result = Scheduler(FunctionExecutor(registry)).run(
+        plan, _build_context(resolved_config)
+    )
     elapsed = time.perf_counter() - started
 
     assert result.status == ResultStatus.PASSED
@@ -278,7 +314,10 @@ def test_scheduler_serializes_parallel_cases_that_share_resource() -> None:
     first_case.functions[0].resources = ["shared:serial-bus"]
     second_case.functions[0].resources = ["shared:serial-bus"]
     resolved_config.cases = [first_case, second_case]
-    resolved_config.fixture.cases = ["cases/linux_host_pc/eth_case.json", "cases/linux_host_pc/uart_case.json"]
+    resolved_config.fixture.cases = [
+        "cases/linux_host_pc/eth_case.json",
+        "cases/linux_host_pc/uart_case.json",
+    ]
     plan = FixtureRunner().build_plan(resolved_config)
 
     def slow_eth(interface, target_ip):
@@ -290,7 +329,9 @@ def test_scheduler_serializes_parallel_cases_that_share_resource() -> None:
         return {"code": 0, "message": "uart ok", "details": {"received": payload}}
 
     started = time.perf_counter()
-    result = Scheduler(FunctionExecutor({"test_eth_ping": slow_eth, "test_uart_loopback": slow_uart})).run(
+    result = Scheduler(
+        FunctionExecutor({"test_eth_ping": slow_eth, "test_uart_loopback": slow_uart})
+    ).run(
         plan,
         _build_context(resolved_config),
     )
@@ -336,32 +377,53 @@ def test_scheduler_parallel_stop_on_failure_preserves_in_flight_tasks() -> None:
         with start_lock:
             started.append("fail")
         slow_started.wait(0.2)
-        return {"code": -1, "message": f"forced failure via {interface}", "details": {"target_ip": target_ip}}
+        return {
+            "code": -1,
+            "message": f"forced failure via {interface}",
+            "details": {"target_ip": target_ip},
+        }
 
     def slow_success(interface, target_ip):
         with start_lock:
             started.append("slow")
         slow_started.set()
         time.sleep(0.05)
-        return {"code": 0, "message": f"slow success via {interface}", "details": {"target_ip": target_ip}}
+        return {
+            "code": 0,
+            "message": f"slow success via {interface}",
+            "details": {"target_ip": target_ip},
+        }
 
     registry = {
         "test_eth_fail_fast": fail_fast,
         "test_eth_slow_success": slow_success,
-        "test_eth_dependent": lambda interface, target_ip: {"code": 0, "message": "should not run"},
+        "test_eth_dependent": lambda interface, target_ip: {
+            "code": 0,
+            "message": "should not run",
+        },
     }
 
-    dependent_task = next(task for task in plan.tasks if task.name == "test_eth_dependent")
-    failing_task = next(task for task in plan.tasks if task.name == "test_eth_fail_fast")
+    dependent_task = next(
+        task for task in plan.tasks if task.name == "test_eth_dependent"
+    )
+    failing_task = next(
+        task for task in plan.tasks if task.name == "test_eth_fail_fast"
+    )
     dependent_task.dependencies = [failing_task.task_id]
 
-    result = Scheduler(FunctionExecutor(registry)).run(plan, _build_context(resolved_config))
+    result = Scheduler(FunctionExecutor(registry)).run(
+        plan, _build_context(resolved_config)
+    )
     case_result = result.children[0]
 
     assert result.status == ResultStatus.ABORTED
     assert case_result.status == ResultStatus.ABORTED
     assert started == ["fail", "slow"] or started == ["slow", "fail"]
-    assert [child.status for child in case_result.children] == [ResultStatus.FAILED, ResultStatus.PASSED, ResultStatus.ABORTED]
+    assert [child.status for child in case_result.children] == [
+        ResultStatus.FAILED,
+        ResultStatus.PASSED,
+        ResultStatus.ABORTED,
+    ]
     assert case_result.children[2].message == "aborted by stop_on_failure"
 
 
@@ -396,7 +458,9 @@ def test_scheduler_parallel_timeout_does_not_cancel_in_flight_tasks() -> None:
     plan = FixtureRunner().build_plan(resolved_config)
 
     timeout_task = next(task for task in plan.tasks if task.name == "test_eth_timeout")
-    dependent_task = next(task for task in plan.tasks if task.name == "test_eth_timeout_dependent")
+    dependent_task = next(
+        task for task in plan.tasks if task.name == "test_eth_timeout_dependent"
+    )
     dependent_task.dependencies = [timeout_task.task_id]
 
     started = threading.Event()
@@ -404,30 +468,54 @@ def test_scheduler_parallel_timeout_does_not_cancel_in_flight_tasks() -> None:
     def blocking_timeout(interface, target_ip):
         started.set()
         time.sleep(0.05)
-        return {"code": 0, "message": f"unexpected success via {interface}", "details": {"target_ip": target_ip}}
+        return {
+            "code": 0,
+            "message": f"unexpected success via {interface}",
+            "details": {"target_ip": target_ip},
+        }
 
     def slow_success(interface, target_ip):
         started.wait(0.2)
         time.sleep(0.05)
-        return {"code": 0, "message": f"slow success via {interface}", "details": {"target_ip": target_ip}}
+        return {
+            "code": 0,
+            "message": f"slow success via {interface}",
+            "details": {"target_ip": target_ip},
+        }
 
     registry = {
         "test_eth_timeout": blocking_timeout,
         "test_eth_parallel_success": slow_success,
-        "test_eth_timeout_dependent": lambda interface, target_ip: {"code": 0, "message": "should not run"},
+        "test_eth_timeout_dependent": lambda interface, target_ip: {
+            "code": 0,
+            "message": "should not run",
+        },
     }
 
-    result = Scheduler(FunctionExecutor(registry)).run(plan, _build_context(resolved_config))
+    result = Scheduler(FunctionExecutor(registry)).run(
+        plan, _build_context(resolved_config)
+    )
     case_result = result.children[0]
 
     assert result.status == ResultStatus.TIMEOUT
     assert case_result.status == ResultStatus.TIMEOUT
-    assert [child.status for child in case_result.children] == [ResultStatus.TIMEOUT, ResultStatus.PASSED, ResultStatus.ABORTED]
-    assert case_result.children[0].details["resource_lock"]["quarantine_until"] is not None
-    assert case_result.children[0].details["residual_risk"]["kind"] == "timeout_background_execution_unknown"
+    assert [child.status for child in case_result.children] == [
+        ResultStatus.TIMEOUT,
+        ResultStatus.PASSED,
+        ResultStatus.ABORTED,
+    ]
+    assert (
+        case_result.children[0].details["resource_lock"]["quarantine_until"] is not None
+    )
+    assert (
+        case_result.children[0].details["residual_risk"]["kind"]
+        == "timeout_background_execution_unknown"
+    )
 
 
-def test_scheduler_parallel_shared_resource_conflict_aborts_unsubmitted_dependents() -> None:
+def test_scheduler_parallel_shared_resource_conflict_aborts_unsubmitted_dependents() -> (
+    None
+):
     resolver = ConfigResolver(REPO_ROOT)
     resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     parallel_case = copy.deepcopy(resolved_config.cases[0])
@@ -462,16 +550,27 @@ def test_scheduler_parallel_shared_resource_conflict_aborts_unsubmitted_dependen
     scheduler = Scheduler(
         FunctionExecutor(
             {
-                "test_eth_locked_one": lambda interface, target_ip: {"code": 0, "message": "should not run"},
-                "test_eth_locked_two": lambda interface, target_ip: {"code": 0, "message": "should not run"},
-                "test_eth_locked_dependent": lambda interface, target_ip: {"code": 0, "message": "should not run"},
+                "test_eth_locked_one": lambda interface, target_ip: {
+                    "code": 0,
+                    "message": "should not run",
+                },
+                "test_eth_locked_two": lambda interface, target_ip: {
+                    "code": 0,
+                    "message": "should not run",
+                },
+                "test_eth_locked_dependent": lambda interface, target_ip: {
+                    "code": 0,
+                    "message": "should not run",
+                },
             }
         )
     )
 
     first_task = next(task for task in plan.tasks if task.name == "test_eth_locked_one")
-    second_task = next(task for task in plan.tasks if task.name == "test_eth_locked_two")
-    dependent_task = next(task for task in plan.tasks if task.name == "test_eth_locked_dependent")
+    next(task for task in plan.tasks if task.name == "test_eth_locked_two")
+    dependent_task = next(
+        task for task in plan.tasks if task.name == "test_eth_locked_dependent"
+    )
     dependent_task.dependencies = [first_task.task_id]
 
     scheduler._resource_lock_manager(context).acquire(
@@ -485,14 +584,24 @@ def test_scheduler_parallel_shared_resource_conflict_aborts_unsubmitted_dependen
 
     assert result.status == ResultStatus.TIMEOUT
     assert case_result.status == ResultStatus.TIMEOUT
-    assert [child.status for child in case_result.children] == [ResultStatus.TIMEOUT, ResultStatus.TIMEOUT, ResultStatus.ABORTED]
+    assert [child.status for child in case_result.children] == [
+        ResultStatus.TIMEOUT,
+        ResultStatus.TIMEOUT,
+        ResultStatus.ABORTED,
+    ]
     assert case_result.children[0].details["resource_lock"]["acquired"] is False
     assert case_result.children[1].details["resource_lock"]["acquired"] is False
-    assert case_result.children[0].details["resource_lock"]["blocked_reason"] == "locked"
-    assert case_result.children[1].details["resource_lock"]["blocked_reason"] == "locked"
+    assert (
+        case_result.children[0].details["resource_lock"]["blocked_reason"] == "locked"
+    )
+    assert (
+        case_result.children[1].details["resource_lock"]["blocked_reason"] == "locked"
+    )
 
 
-def test_scheduler_parallel_dependency_chain_aborts_unsubmitted_descendants_after_failure() -> None:
+def test_scheduler_parallel_dependency_chain_aborts_unsubmitted_descendants_after_failure() -> (
+    None
+):
     resolver = ConfigResolver(REPO_ROOT)
     resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     parallel_case = copy.deepcopy(resolved_config.cases[0])
@@ -520,22 +629,45 @@ def test_scheduler_parallel_dependency_chain_aborts_unsubmitted_descendants_afte
     resolved_config.fixture.cases = ["cases/linux_host_pc/eth_case.json"]
     plan = FixtureRunner().build_plan(resolved_config)
 
-    first_task = next(task for task in plan.tasks if task.name == "test_eth_chain_first")
-    second_task = next(task for task in plan.tasks if task.name == "test_eth_chain_second")
-    third_task = next(task for task in plan.tasks if task.name == "test_eth_chain_third")
+    first_task = next(
+        task for task in plan.tasks if task.name == "test_eth_chain_first"
+    )
+    second_task = next(
+        task for task in plan.tasks if task.name == "test_eth_chain_second"
+    )
+    third_task = next(
+        task for task in plan.tasks if task.name == "test_eth_chain_third"
+    )
     second_task.dependencies = [first_task.task_id]
     third_task.dependencies = [second_task.task_id]
 
     registry = {
-        "test_eth_chain_first": lambda interface, target_ip: {"code": 0, "message": "first ok", "details": {"target_ip": target_ip}},
-        "test_eth_chain_second": lambda interface, target_ip: {"code": -1, "message": "second failed", "details": {"target_ip": target_ip}},
-        "test_eth_chain_third": lambda interface, target_ip: {"code": 0, "message": "should not run"},
+        "test_eth_chain_first": lambda interface, target_ip: {
+            "code": 0,
+            "message": "first ok",
+            "details": {"target_ip": target_ip},
+        },
+        "test_eth_chain_second": lambda interface, target_ip: {
+            "code": -1,
+            "message": "second failed",
+            "details": {"target_ip": target_ip},
+        },
+        "test_eth_chain_third": lambda interface, target_ip: {
+            "code": 0,
+            "message": "should not run",
+        },
     }
 
-    result = Scheduler(FunctionExecutor(registry)).run(plan, _build_context(resolved_config))
+    result = Scheduler(FunctionExecutor(registry)).run(
+        plan, _build_context(resolved_config)
+    )
     case_result = result.children[0]
 
     assert result.status == ResultStatus.ABORTED
     assert case_result.status == ResultStatus.ABORTED
-    assert [child.status for child in case_result.children] == [ResultStatus.PASSED, ResultStatus.FAILED, ResultStatus.ABORTED]
+    assert [child.status for child in case_result.children] == [
+        ResultStatus.PASSED,
+        ResultStatus.FAILED,
+        ResultStatus.ABORTED,
+    ]
     assert case_result.children[2].message == "aborted by stop_on_failure"

@@ -9,7 +9,10 @@ from typing import Any
 
 def to_plain_data(value: Any) -> Any:
     if is_dataclass(value):
-        return {item.name: to_plain_data(getattr(value, item.name)) for item in fields(value)}
+        return {
+            item.name: to_plain_data(getattr(value, item.name))
+            for item in fields(value)
+        }
     if isinstance(value, Path):
         return str(value)
     if isinstance(value, dict):
@@ -41,7 +44,7 @@ class InterfaceBinding(SerializableModel):
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_config(cls, value: Any) -> "InterfaceBinding":
+    def from_config(cls, value: Any) -> InterfaceBinding:
         if isinstance(value, list):
             items = [item for item in value if isinstance(item, str)]
             return cls(
@@ -49,12 +52,18 @@ class InterfaceBinding(SerializableModel):
             )
         if isinstance(value, dict):
             raw_items = value.get("items")
-            items = [item for item in raw_items if isinstance(item, str)] if isinstance(raw_items, list) else []
+            items = (
+                [item for item in raw_items if isinstance(item, str)]
+                if isinstance(raw_items, list)
+                else []
+            )
             description = value.get("description")
             return cls(
                 items=items,
                 description=description if isinstance(description, str) else None,
-                metadata=dict(value.get("metadata", {})) if isinstance(value.get("metadata"), dict) else {},
+                metadata=dict(value.get("metadata", {}))
+                if isinstance(value.get("metadata"), dict)
+                else {},
             )
         raise TypeError(f"unsupported interface binding value: {value!r}")
 
@@ -82,10 +91,12 @@ class GlobalConfig(SerializableModel):
     observability: ObservabilityConfig = field(default_factory=ObservabilityConfig)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "GlobalConfig":
+    def from_dict(cls, data: dict[str, Any]) -> GlobalConfig:
         product_data = dict(data["product"])
         product = ProductConfig(
-            default_board_profile=product_data.get("default_board_profile", product_data.get("board_profile")),
+            default_board_profile=product_data.get(
+                "default_board_profile", product_data.get("board_profile")
+            ),
         )
         return cls(
             product=product,
@@ -106,7 +117,7 @@ class BoardProfile(SerializableModel):
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "BoardProfile":
+    def from_dict(cls, data: dict[str, Any]) -> BoardProfile:
         product_data = dict(data["product"])
         return cls(
             profile_name=data["profile_name"],
@@ -116,7 +127,10 @@ class BoardProfile(SerializableModel):
                 stage=product_data["stage"],
             ),
             supported_cases=list(data.get("supported_cases", [])),
-            interfaces={key: InterfaceBinding.from_config(value) for key, value in data.get("interfaces", {}).items()},
+            interfaces={
+                key: InterfaceBinding.from_config(value)
+                for key, value in data.get("interfaces", {}).items()
+            },
             capabilities=dict(data.get("capabilities", {})),
             tools_required=list(data.get("tools_required", [])),
             metadata=dict(data.get("metadata", {})),
@@ -138,7 +152,7 @@ class FunctionInvocationSpec(SerializableModel):
     tags: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "FunctionInvocationSpec":
+    def from_dict(cls, data: dict[str, Any]) -> FunctionInvocationSpec:
         return cls(
             name=data["name"],
             enabled=data.get("enabled", True),
@@ -147,7 +161,9 @@ class FunctionInvocationSpec(SerializableModel):
             timeout=data.get("timeout"),
             retry=data.get("retry"),
             retry_interval=data.get("retry_interval"),
-            resource_lock_quarantine_seconds=data.get("resource_lock_quarantine_seconds"),
+            resource_lock_quarantine_seconds=data.get(
+                "resource_lock_quarantine_seconds"
+            ),
             required_capabilities=list(data.get("required_capabilities", [])),
             resources=list(data.get("resources", [])),
             tags=list(data.get("tags", [])),
@@ -172,18 +188,23 @@ class CaseSpec(SerializableModel):
     precheck: bool = True
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "CaseSpec":
+    def from_dict(cls, data: dict[str, Any]) -> CaseSpec:
         return cls(
             case_name=data["case_name"],
             module=data["module"],
             board_profile=data.get("board_profile"),
             description=data.get("description"),
-            functions=[FunctionInvocationSpec.from_dict(item) for item in data.get("functions", [])],
+            functions=[
+                FunctionInvocationSpec.from_dict(item)
+                for item in data.get("functions", [])
+            ],
             execution=data.get("execution", "sequential"),
             timeout=data.get("timeout"),
             retry=data.get("retry"),
             retry_interval=data.get("retry_interval"),
-            resource_lock_quarantine_seconds=data.get("resource_lock_quarantine_seconds"),
+            resource_lock_quarantine_seconds=data.get(
+                "resource_lock_quarantine_seconds"
+            ),
             stop_on_failure=data.get("stop_on_failure"),
             required_interfaces=dict(data.get("required_interfaces", {})),
             resources=list(data.get("resources", [])),
@@ -210,7 +231,7 @@ class FixtureSpec(SerializableModel):
     sn_required: bool = False
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "FixtureSpec":
+    def from_dict(cls, data: dict[str, Any]) -> FixtureSpec:
         return cls(
             fixture_name=data["fixture_name"],
             board_profile=data.get("board_profile"),
@@ -220,7 +241,9 @@ class FixtureSpec(SerializableModel):
             timeout=data.get("timeout"),
             retry=data.get("retry"),
             retry_interval=data.get("retry_interval"),
-            resource_lock_quarantine_seconds=data.get("resource_lock_quarantine_seconds"),
+            resource_lock_quarantine_seconds=data.get(
+                "resource_lock_quarantine_seconds"
+            ),
             stop_on_failure=data.get("stop_on_failure", False),
             loop=data.get("loop", False),
             loop_count=data.get("loop_count"),

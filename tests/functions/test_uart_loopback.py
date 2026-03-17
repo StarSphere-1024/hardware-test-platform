@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from functions.uart.test_uart_loopback import test_uart_loopback as uart_loopback_function
+from functions.uart.test_uart_loopback import (
+    test_uart_loopback as uart_loopback_function,
+)
 
 
 class _FakeSerialCapability:
@@ -38,5 +40,5 @@ def test_uart_loopback_uses_serial_capability() -> None:
     assert result["details"]["port"] == "/dev/ttyS0"
     assert result["details"]["received"] == "phase-a"
     assert result["details"]["matched"] is True
-    assert result["metrics"]["payload_size"] == len("phase-a".encode("utf-8"))
+    assert result["metrics"]["payload_size"] == len(b"phase-a")
     assert capability.calls == [("/dev/ttyS0", "phase-a", 115200, 4)]

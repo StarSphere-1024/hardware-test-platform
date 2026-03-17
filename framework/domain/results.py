@@ -42,7 +42,7 @@ class ExecutionResult(SerializableModel):
     metrics: dict[str, float | int] = field(default_factory=dict)
     artifacts: list[ReportArtifact] = field(default_factory=list)
     retry_count: int = 0
-    children: list["ExecutionResult"] = field(default_factory=list)
+    children: list[ExecutionResult] = field(default_factory=list)
 
 
 @dataclass(slots=True)

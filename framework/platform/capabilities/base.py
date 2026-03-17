@@ -11,7 +11,9 @@ from ..adapters.base import PlatformAdapter
 class CapabilityBase(ABC):
     name: str
 
-    def __init__(self, adapter: PlatformAdapter, board_profile: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self, adapter: PlatformAdapter, board_profile: dict[str, Any] | None = None
+    ) -> None:
         self.adapter = adapter
         self.board_profile = dict(board_profile or {})
 
@@ -28,7 +30,14 @@ class NetworkCapabilityContract(CapabilityBase):
         raise NotImplementedError
 
     @abstractmethod
-    def ping(self, target_ip: str, *, interface: str | None = None, count: int = 1, timeout: int = 5) -> dict[str, Any]:
+    def ping(
+        self,
+        target_ip: str,
+        *,
+        interface: str | None = None,
+        count: int = 1,
+        timeout: int = 5,
+    ) -> dict[str, Any]:
         raise NotImplementedError
 
 

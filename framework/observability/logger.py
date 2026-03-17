@@ -21,20 +21,40 @@ from .result_store import ResultStore
 
 
 class UnifiedLogger:
-    def __init__(self, logs_dir: str | Path = "logs") -> None:
+    def __init__(self, logs_dir: str | Path = "logs", verbose_level: int = 0) -> None:
+        """Initialize unified logger.
+
+        Args:
+            logs_dir: Directory for log files
+            verbose_level: Verbosity level (0=INFO, 1+=DEBUG)
+        """
         self.logs_dir = Path(logs_dir)
         self.logs_dir.mkdir(parents=True, exist_ok=True)
+        self.verbose_level = verbose_level
         self._loggers: dict[str, logging.Logger] = {}
 
     def get_logger(self, request_id: str) -> logging.Logger:
+        """Get or create a logger for the given request ID.
+
+        Args:
+            request_id: Unique request identifier
+
+        Returns:
+            Configured logger instance
+        """
         if request_id in self._loggers:
             return self._loggers[request_id]
         logger = logging.getLogger(f"hardware_test_platform.{request_id}")
-        logger.setLevel(logging.INFO)
+        log_level = logging.DEBUG if self.verbose_level >= 1 else logging.INFO
+        logger.setLevel(log_level)
         logger.propagate = False
         if not logger.handlers:
-            handler = logging.FileHandler(self.logs_dir / f"{request_id}.log", encoding="utf-8")
-            handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+            handler = logging.FileHandler(
+                self.logs_dir / f"{request_id}.log", encoding="utf-8"
+            )
+            handler.setFormatter(
+                logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+            )
             logger.addHandler(handler)
         self._loggers[request_id] = logger
         return logger
@@ -54,7 +74,13 @@ class ExecutionObserver:
         self.result_store = result_store
         self.event_store = event_store
         self.report_generator = report_generator
-        self.logger = logger.get_logger(str(resolved_config.request.get("request_id", resolved_config.request.get("kind", "request"))))
+        self.logger = logger.get_logger(
+            str(
+                resolved_config.request.get(
+                    "request_id", resolved_config.request.get("kind", "request")
+                )
+            )
+        )
         self.plan_tasks: dict[str, ExecutionTask] = {}
         self.task_states: dict[str, str] = {}
         self.task_results: dict[str, ExecutionResult] = {}
@@ -64,7 +90,11 @@ class ExecutionObserver:
 
     @property
     def request_id(self) -> str:
-        return str(self.resolved_config.request.get("request_id", self.resolved_config.request.get("kind", "request")))
+        return str(
+            self.resolved_config.request.get(
+                "request_id", self.resolved_config.request.get("kind", "request")
+            )
+        )
 
     def on_plan_created(self, plan: ExecutionPlan) -> None:
         with self._lock:
@@ -75,14 +105,22 @@ class ExecutionObserver:
                 message="execution plan created",
                 payload={
                     "target_type": self.resolved_config.request.get("kind", "fixture"),
-                    "target_name": self.resolved_config.request.get("fixture_path") or self.resolved_config.request.get("case_path"),
+                    "target_name": self.resolved_config.request.get("fixture_path")
+                    or self.resolved_config.request.get("case_path"),
                     "selected_board_profile": self.resolved_config.board_profile.profile_name,
                     "resolved_case_count": len(self.resolved_config.cases),
                 },
                 plan_id=plan.plan_id,
             )
 
-    def on_task_started(self, task: ExecutionTask, *, plan_id: str, attempt: int | None = None, status_before: str | None = None) -> None:
+    def on_task_started(
+        self,
+        task: ExecutionTask,
+        *,
+        plan_id: str,
+        attempt: int | None = None,
+        status_before: str | None = None,
+    ) -> None:
         with self._lock:
             self.task_states[task.task_id] = ResultStatus.RUNNING.value
             self.task_started_at.setdefault(task.task_id, datetime.now(timezone.utc))
@@ -133,34 +171,62 @@ class ExecutionObserver:
             )
             self._write_snapshot(plan_id)
 
-    def on_task_finished(self, task: ExecutionTask, result: ExecutionResult, *, plan_id: str) -> None:
+    def on_task_finished(
+        self, task: ExecutionTask, result: ExecutionResult, *, plan_id: str
+    ) -> None:
         with self._lock:
             normalized = normalize_status(result.status)
             self.task_states[task.task_id] = normalized
             self.task_results[task.task_id] = result
-            residual_risk = result.details.get("residual_risk") if isinstance(result.details, dict) else None
-            status = EventStatus.SUCCESS if normalized == "passed" else EventStatus.ERROR if normalized in {"failed", "timeout", "aborted"} else EventStatus.INFO
+            residual_risk = (
+                result.details.get("residual_risk")
+                if isinstance(result.details, dict)
+                else None
+            )
+            status = (
+                EventStatus.SUCCESS
+                if normalized == "passed"
+                else EventStatus.ERROR
+                if normalized in {"failed", "timeout", "aborted"}
+                else EventStatus.INFO
+            )
             self._append_event(
                 event_type=EventType.TASK_FINISHED,
                 status=status,
                 message=result.message or f"task finished: {task.name}",
                 plan_id=plan_id,
                 task=task,
-                attempt=(result.retry_count + 1) if task.task_type == "function" else None,
+                attempt=(result.retry_count + 1)
+                if task.task_type == "function"
+                else None,
                 status_before=ResultStatus.RUNNING.value,
                 status_after=normalized,
                 payload={
                     "code": result.code,
                     "duration_ms": result.duration_ms,
-                    "summary": result.details.get("summary") if isinstance(result.details, dict) else None,
+                    "summary": result.details.get("summary")
+                    if isinstance(result.details, dict)
+                    else None,
                     "residual_risk": residual_risk,
                 },
             )
-            self._write_snapshot(plan_id, root_result=result if task.task_type == "fixture" else None)
+            self._write_snapshot(
+                plan_id, root_result=result if task.task_type == "fixture" else None
+            )
 
-    def on_execution_finished(self, root_result: ExecutionResult, *, plan: ExecutionPlan, context: ExecutionContext) -> list[str]:
+    def on_execution_finished(
+        self,
+        root_result: ExecutionResult,
+        *,
+        plan: ExecutionPlan,
+        context: ExecutionContext,
+    ) -> list[str]:
         with self._lock:
-            snapshot = self._write_snapshot(plan.plan_id, root_result=root_result, runtime_state=context.runtime_state)
+            snapshot = self._write_snapshot(
+                plan.plan_id,
+                root_result=root_result,
+                runtime_state=context.runtime_state,
+            )
             events = self.event_store.read(self.request_id)
             artifacts = self.report_generator.generate(
                 root_result=root_result,
@@ -179,7 +245,11 @@ class ExecutionObserver:
                 status_after=normalize_status(root_result.status),
                 payload={"artifacts": [artifact.to_dict() for artifact in artifacts]},
             )
-            self._write_snapshot(plan.plan_id, root_result=root_result, runtime_state=context.runtime_state)
+            self._write_snapshot(
+                plan.plan_id,
+                root_result=root_result,
+                runtime_state=context.runtime_state,
+            )
             return [artifact.uri for artifact in artifacts]
 
     def _write_snapshot(
@@ -196,13 +266,17 @@ class ExecutionObserver:
             request_id=self.request_id,
             plan_id=plan_id,
             updated_at=datetime.now(timezone.utc),
-            current_status=fixture_summary.get("status", self._infer_current_status(counters)),
+            current_status=fixture_summary.get(
+                "status", self._infer_current_status(counters)
+            ),
             fixture=fixture_summary,
             cases=case_summaries,
             counters=counters,
             status_summary=dict(counters),
             runtime_state=self._sanitize_runtime_state(runtime_state or {}),
-            results=[root_result] if root_result is not None else list(self.task_results.values()),
+            results=[root_result]
+            if root_result is not None
+            else list(self.task_results.values()),
         )
         self.result_store.write_snapshot(snapshot)
         self.latest_snapshot = snapshot
@@ -214,7 +288,9 @@ class ExecutionObserver:
             counters[status] = counters.get(status, 0) + 1
         return counters
 
-    def _build_fixture_summary(self, root_result: ExecutionResult | None) -> dict[str, Any]:
+    def _build_fixture_summary(
+        self, root_result: ExecutionResult | None
+    ) -> dict[str, Any]:
         if root_result is None:
             return {}
         return {
@@ -224,7 +300,9 @@ class ExecutionObserver:
             "message": root_result.message,
         }
 
-    def _build_case_summaries(self, root_result: ExecutionResult | None) -> list[dict[str, Any]]:
+    def _build_case_summaries(
+        self, root_result: ExecutionResult | None
+    ) -> list[dict[str, Any]]:
         case_summaries: list[dict[str, Any]] = []
         if root_result is None:
             for task in self.plan_tasks.values():
@@ -239,7 +317,11 @@ class ExecutionObserver:
 
                 child_statuses = self._collect_child_statuses(task.task_id)
                 inferred_status = self._infer_task_status(task.task_id, child_statuses)
-                case_summaries.append(self._build_case_summary_from_task(task, inferred_status, child_statuses))
+                case_summaries.append(
+                    self._build_case_summary_from_task(
+                        task, inferred_status, child_statuses
+                    )
+                )
             return case_summaries
         for child in root_result.children:
             if child.task_type != "case":
@@ -247,7 +329,9 @@ class ExecutionObserver:
             case_summaries.append(self._build_case_summary_from_result(child))
         return case_summaries
 
-    def _build_case_summary_from_result(self, case_result: ExecutionResult) -> dict[str, Any]:
+    def _build_case_summary_from_result(
+        self, case_result: ExecutionResult
+    ) -> dict[str, Any]:
         return {
             "task_id": case_result.task_id,
             "name": case_result.name,
@@ -267,12 +351,16 @@ class ExecutionObserver:
         started_at = self.task_started_at.get(task.task_id)
         duration_ms = None
         if started_at is not None and inferred_status == ResultStatus.RUNNING.value:
-            duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
+            duration_ms = int(
+                (datetime.now(timezone.utc) - started_at).total_seconds() * 1000
+            )
         return {
             "task_id": task.task_id,
             "name": task.name,
             "status": inferred_status,
-            "message": self._infer_case_message(task.name, inferred_status, child_statuses),
+            "message": self._infer_case_message(
+                task.name, inferred_status, child_statuses
+            ),
             "summary": self._summarize_statuses(child_statuses),
             "started_at": started_at,
             "duration_ms": duration_ms,
@@ -300,7 +388,10 @@ class ExecutionObserver:
             if direct_state != "pending":
                 return direct_state
 
-        if any(status in {ResultStatus.RUNNING.value, "retrying"} for status in child_statuses):
+        if any(
+            status in {ResultStatus.RUNNING.value, "retrying"}
+            for status in child_statuses
+        ):
             return ResultStatus.RUNNING.value
         for terminal in ("failed", "timeout", "aborted"):
             if terminal in child_statuses:
@@ -318,10 +409,14 @@ class ExecutionObserver:
             summary[normalized] = summary.get(normalized, 0) + 1
         return summary
 
-    def _infer_case_message(self, case_name: str, status: str, child_statuses: list[str]) -> str:
+    def _infer_case_message(
+        self, case_name: str, status: str, child_statuses: list[str]
+    ) -> str:
         if child_statuses:
             summary = self._summarize_statuses(child_statuses)
-            ordered = ", ".join(f"{key}={value}" for key, value in sorted(summary.items()))
+            ordered = ", ".join(
+                f"{key}={value}" for key, value in sorted(summary.items())
+            )
             if status == ResultStatus.RUNNING.value:
                 return f"case running: {ordered}"
             if status == "pending":

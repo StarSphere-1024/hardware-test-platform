@@ -5,7 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
+from collections.abc import Sequence
 
 
 @dataclass(slots=True)
@@ -30,7 +31,13 @@ class PlatformAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def execute(self, command: str | Sequence[str], *, timeout: int | None = None, shell: bool | None = None) -> CommandResult:
+    def execute(
+        self,
+        command: str | Sequence[str],
+        *,
+        timeout: int | None = None,
+        shell: bool | None = None,
+    ) -> CommandResult:
         raise NotImplementedError
 
     @abstractmethod
@@ -41,10 +48,16 @@ class PlatformAdapter(ABC):
     # access used by Linux-style capability implementations rather than the
     # platform-agnostic adapter contract consumed by the execution layer.
     def _path_exists(self, path: str | Path) -> bool:
-        raise NotImplementedError(f"{self.__class__.__name__} does not expose filesystem path checks")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not expose filesystem path checks"
+        )
 
     def _read_text(self, path: str | Path, *, encoding: str = "utf-8") -> str:
-        raise NotImplementedError(f"{self.__class__.__name__} does not expose filesystem text reads")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not expose filesystem text reads"
+        )
 
     def _list_paths(self, pattern: str) -> list[str]:
-        raise NotImplementedError(f"{self.__class__.__name__} does not expose filesystem path discovery")
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not expose filesystem path discovery"
+        )

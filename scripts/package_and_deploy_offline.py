@@ -88,7 +88,11 @@ def find_repo_root() -> Path:
 
 def resolve_wheelhouse(repo_root: Path, explicit: str | None) -> Path:
     if explicit:
-        return (repo_root / explicit).resolve() if not Path(explicit).is_absolute() else Path(explicit)
+        return (
+            (repo_root / explicit).resolve()
+            if not Path(explicit).is_absolute()
+            else Path(explicit)
+        )
     for candidate in DEFAULT_WHEELHOUSE_CANDIDATES:
         path = repo_root / candidate
         if path.exists():
@@ -101,13 +105,17 @@ def ensure_sshpass() -> None:
         raise RuntimeError("sshpass not found. Please install sshpass first.")
 
 
-def run_command(command: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None) -> None:
+def run_command(
+    command: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None
+) -> None:
     result = subprocess.run(command, cwd=str(cwd) if cwd else None, env=env)
     if result.returncode != 0:
         raise RuntimeError(f"command failed: {' '.join(command)}")
 
 
-def ensure_dependency_artifacts(wheelhouse: Path, *, download_missing: bool, skip_psutil: bool) -> None:
+def ensure_dependency_artifacts(
+    wheelhouse: Path, *, download_missing: bool, skip_psutil: bool
+) -> None:
     wheelhouse.mkdir(parents=True, exist_ok=True)
     runtime_missing = not any(wheelhouse.iterdir())
     if runtime_missing and not download_missing:
@@ -158,12 +166,22 @@ def ensure_dependency_artifacts(wheelhouse: Path, *, download_missing: bool, ski
         raise RuntimeError(f"missing rich artifact in wheelhouse: {wheelhouse}")
     if not any(name.startswith("pyserial-") for name in artifact_names):
         raise RuntimeError(f"missing pyserial artifact in wheelhouse: {wheelhouse}")
-    if not skip_psutil and not any(name.startswith("psutil-") for name in artifact_names):
+    if not skip_psutil and not any(
+        name.startswith("psutil-") for name in artifact_names
+    ):
         raise RuntimeError(f"missing psutil artifact in wheelhouse: {wheelhouse}")
-    if not skip_psutil and not any(name.startswith("setuptools-") for name in artifact_names):
-        raise RuntimeError(f"missing setuptools artifact for psutil build in wheelhouse: {wheelhouse}")
-    if not skip_psutil and not any(name.startswith("wheel-") for name in artifact_names):
-        raise RuntimeError(f"missing wheel artifact for psutil build in wheelhouse: {wheelhouse}")
+    if not skip_psutil and not any(
+        name.startswith("setuptools-") for name in artifact_names
+    ):
+        raise RuntimeError(
+            f"missing setuptools artifact for psutil build in wheelhouse: {wheelhouse}"
+        )
+    if not skip_psutil and not any(
+        name.startswith("wheel-") for name in artifact_names
+    ):
+        raise RuntimeError(
+            f"missing wheel artifact for psutil build in wheelhouse: {wheelhouse}"
+        )
 
 
 def should_skip(path: Path) -> bool:
@@ -250,16 +268,29 @@ def deploy_to_remote(
     remote_wheelhouse_bundle = f"{remote_dir}/wheelhouse.tar.gz"
 
     run_command(
-        ssh_base_args(host, user) + [f"mkdir -p '{remote_dir}'"],
+        [*ssh_base_args(host, user), f"mkdir -p '{remote_dir}'"],
         env=env,
     )
-    run_command(scp_base_args(host, user) + [str(source_bundle), f"{user}@{host}:{remote_source_bundle}"], env=env)
+    run_command(
+        [
+            *scp_base_args(host, user),
+            str(source_bundle),
+            f"{user}@{host}:{remote_source_bundle}",
+        ],
+        env=env,
+    )
 
     if not skip_deps:
         if wheelhouse_bundle is None:
-            raise RuntimeError("wheelhouse bundle is required when dependency sync is enabled")
+            raise RuntimeError(
+                "wheelhouse bundle is required when dependency sync is enabled"
+            )
         run_command(
-            scp_base_args(host, user) + [str(wheelhouse_bundle), f"{user}@{host}:{remote_wheelhouse_bundle}"],
+            [
+                *scp_base_args(host, user),
+                str(wheelhouse_bundle),
+                f"{user}@{host}:{remote_wheelhouse_bundle}",
+            ],
             env=env,
         )
 
@@ -280,7 +311,9 @@ def deploy_to_remote(
             ]
         )
     if not skip_venv:
-        remote_setup_lines.extend([f"rm -rf '{remote_venv}'", f"python3 -m venv '{remote_venv}'"])
+        remote_setup_lines.extend(
+            [f"rm -rf '{remote_venv}'", f"python3 -m venv '{remote_venv}'"]
+        )
     else:
         remote_setup_lines.extend(
             [
@@ -306,18 +339,26 @@ def deploy_to_remote(
                     "fi",
                 ]
             )
-    remote_setup_lines.append(f"rm -f '{remote_source_bundle}' '{remote_wheelhouse_bundle}'")
-    run_command(ssh_base_args(host, user) + ["\n".join(remote_setup_lines)], env=env)
+    remote_setup_lines.append(
+        f"rm -f '{remote_source_bundle}' '{remote_wheelhouse_bundle}'"
+    )
+    run_command([*ssh_base_args(host, user), "\n".join(remote_setup_lines)], env=env)
 
 
 def main() -> int:
     args = parse_args()
     if not args.host:
-        return fail("remote host is required, pass it as an argument or set REMOTE_HOST")
+        return fail(
+            "remote host is required, pass it as an argument or set REMOTE_HOST"
+        )
     if not args.user:
-        return fail("remote user is required, pass it as an argument or set REMOTE_USER")
+        return fail(
+            "remote user is required, pass it as an argument or set REMOTE_USER"
+        )
     if not args.password:
-        return fail("remote password is required, pass it as an argument or set REMOTE_PASS")
+        return fail(
+            "remote password is required, pass it as an argument or set REMOTE_PASS"
+        )
     if not args.remote_dir:
         return fail("remote_dir is required, pass it as an argument or set REMOTE_DIR")
     if args.fast_reuse:

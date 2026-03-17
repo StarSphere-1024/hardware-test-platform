@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from framework.config.errors import OverrideNotAllowedError, ProfileNotSupportedError, SchemaValidationError
+from framework.config.errors import (
+    OverrideNotAllowedError,
+    ProfileNotSupportedError,
+    SchemaValidationError,
+)
 from framework.config.resolver import ConfigResolver
 from framework.config.validator import validate_fixture_data
 
@@ -41,11 +45,21 @@ def test_fixture_resolution_builds_resolved_execution_config() -> None:
     assert resolved.resolved_runtime["timeout"] == 300
     assert resolved.resolved_runtime["resource_lock_quarantine_seconds"] == 5
     assert resolved.config_sources["runtime"]["timeout"]["source"] == "fixture"
-    assert resolved.config_sources["runtime"]["resource_lock_quarantine_seconds"]["source"] == "global"
-    assert resolved.config_sources["case_runtime"]["uart_case"]["functions"]["test_uart_loopback#0"]["timeout"]["source"] == "function"
+    assert (
+        resolved.config_sources["runtime"]["resource_lock_quarantine_seconds"]["source"]
+        == "global"
+    )
+    assert (
+        resolved.config_sources["case_runtime"]["uart_case"]["functions"][
+            "test_uart_loopback#0"
+        ]["timeout"]["source"]
+        == "function"
+    )
 
 
-def test_case_resources_are_inherited_and_function_resources_can_override(tmp_path: Path) -> None:
+def test_case_resources_are_inherited_and_function_resources_can_override(
+    tmp_path: Path,
+) -> None:
     case_path = tmp_path / "resource_case.json"
     case_path.write_text(
         json.dumps(
@@ -118,7 +132,9 @@ def test_case_resolution_falls_back_to_default_board_profile() -> None:
     assert resolved.board_profile.profile_name == "linux_host_pc"
 
 
-def test_fixture_resolution_rejects_mismatched_case_board_profile(tmp_path: Path) -> None:
+def test_fixture_resolution_rejects_mismatched_case_board_profile(
+    tmp_path: Path,
+) -> None:
     fixture_path = tmp_path / "fixture.json"
     case_path = tmp_path / "case.json"
 
@@ -155,14 +171,21 @@ def test_cli_override_wins_for_runtime_fields() -> None:
 
     resolved = resolver.resolve_fixture(
         "fixtures/linux_host_pc.json",
-        cli_overrides={"timeout": 120, "report_enabled": False, "resource_lock_quarantine_seconds": 1.5},
+        cli_overrides={
+            "timeout": 120,
+            "report_enabled": False,
+            "resource_lock_quarantine_seconds": 1.5,
+        },
     )
 
     assert resolved.resolved_runtime["timeout"] == 120
     assert resolved.resolved_runtime["report_enabled"] is False
     assert resolved.resolved_runtime["resource_lock_quarantine_seconds"] == 1.5
     assert resolved.config_sources["runtime"]["timeout"]["source"] == "cli"
-    assert resolved.config_sources["runtime"]["resource_lock_quarantine_seconds"]["source"] == "cli"
+    assert (
+        resolved.config_sources["runtime"]["resource_lock_quarantine_seconds"]["source"]
+        == "cli"
+    )
     assert resolved.cases[0].functions[0].timeout == 120
     assert resolved.cases[0].functions[0].resource_lock_quarantine_seconds == 1.5
 
@@ -171,11 +194,15 @@ def test_invalid_override_is_rejected() -> None:
     resolver = ConfigResolver(REPO_ROOT)
 
     with pytest.raises(OverrideNotAllowedError):
-        resolver.resolve_fixture("fixtures/linux_host_pc.json", cli_overrides={"unsupported": True})
+        resolver.resolve_fixture(
+            "fixtures/linux_host_pc.json", cli_overrides={"unsupported": True}
+        )
 
 
 def test_fixture_validation_rejects_invalid_loop_configuration() -> None:
-    invalid_fixture = json.loads((REPO_ROOT / "fixtures" / "linux_host_pc.json").read_text(encoding="utf-8"))
+    invalid_fixture = json.loads(
+        (REPO_ROOT / "fixtures" / "linux_host_pc.json").read_text(encoding="utf-8")
+    )
     invalid_fixture["loop"] = True
     invalid_fixture["loop_count"] = 0
 

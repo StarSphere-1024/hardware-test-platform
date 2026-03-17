@@ -36,25 +36,45 @@ class ConfigError(Exception):
 
 
 class ConfigFileNotFoundError(ConfigError):
-    def __init__(self, message: str, *, field_path: str | None = None, source: str | None = None) -> None:
-        super().__init__("file_not_found", message, field_path=field_path, source=source)
+    def __init__(
+        self, message: str, *, field_path: str | None = None, source: str | None = None
+    ) -> None:
+        super().__init__(
+            "file_not_found", message, field_path=field_path, source=source
+        )
 
 
 class SchemaValidationError(ConfigError):
-    def __init__(self, message: str, *, field_path: str | None = None, source: str | None = None) -> None:
-        super().__init__("schema_invalid", message, field_path=field_path, source=source)
+    def __init__(
+        self, message: str, *, field_path: str | None = None, source: str | None = None
+    ) -> None:
+        super().__init__(
+            "schema_invalid", message, field_path=field_path, source=source
+        )
 
 
 class TemplateResolutionError(ConfigError):
-    def __init__(self, message: str, *, field_path: str | None = None, source: str | None = None) -> None:
-        super().__init__("template_unresolved", message, field_path=field_path, source=source)
+    def __init__(
+        self, message: str, *, field_path: str | None = None, source: str | None = None
+    ) -> None:
+        super().__init__(
+            "template_unresolved", message, field_path=field_path, source=source
+        )
 
 
 class OverrideNotAllowedError(ConfigError):
-    def __init__(self, message: str, *, field_path: str | None = None, source: str | None = None) -> None:
-        super().__init__("override_not_allowed", message, field_path=field_path, source=source)
+    def __init__(
+        self, message: str, *, field_path: str | None = None, source: str | None = None
+    ) -> None:
+        super().__init__(
+            "override_not_allowed", message, field_path=field_path, source=source
+        )
 
 
 class ProfileNotSupportedError(ConfigError):
-    def __init__(self, message: str, *, field_path: str | None = None, source: str | None = None) -> None:
-        super().__init__("profile_not_supported", message, field_path=field_path, source=source)
+    def __init__(
+        self, message: str, *, field_path: str | None = None, source: str | None = None
+    ) -> None:
+        super().__init__(
+            "profile_not_supported", message, field_path=field_path, source=source
+        )

@@ -41,7 +41,9 @@ class ExecutionTask(SerializableModel):
         if not self.name:
             raise ValueError("name must not be empty")
         if self.execution_mode not in _EXECUTION_MODES:
-            raise ValueError(f"execution_mode must be one of {sorted(_EXECUTION_MODES)}")
+            raise ValueError(
+                f"execution_mode must be one of {sorted(_EXECUTION_MODES)}"
+            )
 
 
 @dataclass(slots=True)

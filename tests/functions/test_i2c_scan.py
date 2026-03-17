@@ -23,7 +23,9 @@ class _FakeI2CCapability:
 def test_i2c_scan_uses_i2c_capability() -> None:
     capability = _FakeI2CCapability()
 
-    result = i2c_scan_function(bus="/dev/i2c-0", scan_all=False, capability_registry={"i2c": capability})
+    result = i2c_scan_function(
+        bus="/dev/i2c-0", scan_all=False, capability_registry={"i2c": capability}
+    )
 
     assert result["code"] == 0
     assert result["status"] == "passed"

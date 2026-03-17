@@ -7,9 +7,20 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .errors import OverrideNotAllowedError, ProfileNotSupportedError, TemplateResolutionError
+from .errors import (
+    OverrideNotAllowedError,
+    ProfileNotSupportedError,
+    TemplateResolutionError,
+)
 from .loader import ConfigLoader
-from .models import BoardProfile, CaseSpec, FixtureSpec, FunctionInvocationSpec, GlobalConfig, ResolvedExecutionConfig
+from .models import (
+    BoardProfile,
+    CaseSpec,
+    FixtureSpec,
+    FunctionInvocationSpec,
+    GlobalConfig,
+    ResolvedExecutionConfig,
+)
 
 _ALLOWED_OVERRIDES = {
     "board_profile",
@@ -43,9 +54,16 @@ class ConfigResolver:
         request: dict[str, Any] | None = None,
     ) -> ResolvedExecutionConfig:
         overrides = self._validate_overrides(cli_overrides)
-        global_config, global_source = self.loader.load_global_config(global_config_path)
+        global_config, global_source = self.loader.load_global_config(
+            global_config_path
+        )
         fixture, fixture_source = self.loader.load_fixture(fixture_path)
-        board_profile_name = overrides.get("board_profile") or board_profile or fixture.board_profile or global_config.product.default_board_profile
+        board_profile_name = (
+            overrides.get("board_profile")
+            or board_profile
+            or fixture.board_profile
+            or global_config.product.default_board_profile
+        )
         board, board_source = self.loader.load_board_profile(
             profile_name=board_profile_name
         )
@@ -54,16 +72,26 @@ class ConfigResolver:
         raw_cases: list[CaseSpec] = []
         fixture_dir = Path(fixture_source).parent
         for case_ref in fixture.cases:
-            case_spec, case_source = self.loader.load_case(case_ref, base_dir=fixture_dir)
-            self._assert_case_board_compatible(board.profile_name, fixture, case_spec, case_source)
+            case_spec, case_source = self.loader.load_case(
+                case_ref, base_dir=fixture_dir
+            )
+            self._assert_case_board_compatible(
+                board.profile_name, fixture, case_spec, case_source
+            )
             self._assert_case_supported(board, case_spec, case_source)
             raw_cases.append(case_spec)
             case_sources[case_spec.case_name] = case_source
 
         resolved_interfaces = self._build_resolved_interfaces(board)
-        context = self._build_template_context(global_config, board, resolved_interfaces)
-        resolved_runtime, runtime_sources = self._resolve_fixture_runtime(global_config, fixture, overrides)
-        resolved_cases, case_trace = self._resolve_cases(raw_cases, context, fixture, global_config, overrides)
+        context = self._build_template_context(
+            global_config, board, resolved_interfaces
+        )
+        resolved_runtime, runtime_sources = self._resolve_fixture_runtime(
+            global_config, fixture, overrides
+        )
+        resolved_cases, case_trace = self._resolve_cases(
+            raw_cases, context, fixture, global_config, overrides
+        )
         capability_requirements = self._collect_capability_requirements(resolved_cases)
 
         return ResolvedExecutionConfig(
@@ -95,18 +123,33 @@ class ConfigResolver:
         request: dict[str, Any] | None = None,
     ) -> ResolvedExecutionConfig:
         overrides = self._validate_overrides(cli_overrides)
-        global_config, global_source = self.loader.load_global_config(global_config_path)
+        global_config, global_source = self.loader.load_global_config(
+            global_config_path
+        )
         case_spec, case_source = self.loader.load_case(case_path)
-        board_profile_name = overrides.get("board_profile") or board_profile or case_spec.board_profile or global_config.product.default_board_profile
+        board_profile_name = (
+            overrides.get("board_profile")
+            or board_profile
+            or case_spec.board_profile
+            or global_config.product.default_board_profile
+        )
         board, board_source = self.loader.load_board_profile(
             profile_name=board_profile_name
         )
-        self._assert_case_board_compatible(board.profile_name, None, case_spec, case_source)
+        self._assert_case_board_compatible(
+            board.profile_name, None, case_spec, case_source
+        )
         self._assert_case_supported(board, case_spec, case_source)
         resolved_interfaces = self._build_resolved_interfaces(board)
-        context = self._build_template_context(global_config, board, resolved_interfaces)
-        resolved_cases, case_trace = self._resolve_cases([case_spec], context, None, global_config, overrides)
-        resolved_runtime, runtime_sources = self._resolve_case_only_runtime(global_config, case_spec, overrides)
+        context = self._build_template_context(
+            global_config, board, resolved_interfaces
+        )
+        resolved_cases, case_trace = self._resolve_cases(
+            [case_spec], context, None, global_config, overrides
+        )
+        resolved_runtime, runtime_sources = self._resolve_case_only_runtime(
+            global_config, case_spec, overrides
+        )
         capability_requirements = self._collect_capability_requirements(resolved_cases)
 
         return ResolvedExecutionConfig(
@@ -127,7 +170,9 @@ class ConfigResolver:
             },
         )
 
-    def _validate_overrides(self, cli_overrides: dict[str, Any] | None) -> dict[str, Any]:
+    def _validate_overrides(
+        self, cli_overrides: dict[str, Any] | None
+    ) -> dict[str, Any]:
         overrides = dict(cli_overrides or {})
         unsupported = sorted(set(overrides) - _ALLOWED_OVERRIDES)
         if unsupported:
@@ -137,7 +182,9 @@ class ConfigResolver:
             )
         return overrides
 
-    def _assert_case_supported(self, board: BoardProfile, case_spec: CaseSpec, case_source: str) -> None:
+    def _assert_case_supported(
+        self, board: BoardProfile, case_spec: CaseSpec, case_source: str
+    ) -> None:
         if board.supported_cases and case_spec.case_name not in board.supported_cases:
             raise ProfileNotSupportedError(
                 f"case '{case_spec.case_name}' is not allowed by board profile '{board.profile_name}'",
@@ -152,13 +199,21 @@ class ConfigResolver:
         case_spec: CaseSpec,
         case_source: str,
     ) -> None:
-        if fixture is not None and fixture.board_profile and case_spec.board_profile and fixture.board_profile != case_spec.board_profile:
+        if (
+            fixture is not None
+            and fixture.board_profile
+            and case_spec.board_profile
+            and fixture.board_profile != case_spec.board_profile
+        ):
             raise ProfileNotSupportedError(
                 f"case '{case_spec.case_name}' declares board profile '{case_spec.board_profile}' but fixture '{fixture.fixture_name}' declares '{fixture.board_profile}'",
                 field_path="board_profile",
                 source=case_source,
             )
-        if case_spec.board_profile and case_spec.board_profile != resolved_board_profile:
+        if (
+            case_spec.board_profile
+            and case_spec.board_profile != resolved_board_profile
+        ):
             raise ProfileNotSupportedError(
                 f"case '{case_spec.case_name}' declares board profile '{case_spec.board_profile}' but resolved board profile is '{resolved_board_profile}'",
                 field_path="board_profile",
@@ -204,7 +259,11 @@ class ConfigResolver:
         runtime: dict[str, Any] = {}
         sources: dict[str, dict[str, Any]] = {}
         values = {
-            "execution": [("default", "sequential"), ("fixture", fixture.execution), ("cli", overrides.get("execution"))],
+            "execution": [
+                ("default", "sequential"),
+                ("fixture", fixture.execution),
+                ("cli", overrides.get("execution")),
+            ],
             "timeout": [
                 ("global", global_config.runtime.default_timeout),
                 ("fixture", fixture.timeout),
@@ -221,20 +280,43 @@ class ConfigResolver:
                 ("cli", overrides.get("retry_interval")),
             ],
             "resource_lock_quarantine_seconds": [
-                ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
+                (
+                    "global",
+                    global_config.runtime.default_resource_lock_quarantine_seconds,
+                ),
                 ("fixture", fixture.resource_lock_quarantine_seconds),
                 ("cli", overrides.get("resource_lock_quarantine_seconds")),
             ],
-            "stop_on_failure": [("default", False), ("fixture", fixture.stop_on_failure), ("cli", overrides.get("stop_on_failure"))],
-            "loop": [("default", False), ("fixture", fixture.loop), ("cli", overrides.get("loop"))],
-            "loop_count": [("default", None), ("fixture", fixture.loop_count), ("cli", overrides.get("loop_count"))],
-            "loop_interval": [("default", None), ("fixture", fixture.loop_interval), ("cli", overrides.get("loop_interval"))],
+            "stop_on_failure": [
+                ("default", False),
+                ("fixture", fixture.stop_on_failure),
+                ("cli", overrides.get("stop_on_failure")),
+            ],
+            "loop": [
+                ("default", False),
+                ("fixture", fixture.loop),
+                ("cli", overrides.get("loop")),
+            ],
+            "loop_count": [
+                ("default", None),
+                ("fixture", fixture.loop_count),
+                ("cli", overrides.get("loop_count")),
+            ],
+            "loop_interval": [
+                ("default", None),
+                ("fixture", fixture.loop_interval),
+                ("cli", overrides.get("loop_interval")),
+            ],
             "report_enabled": [
                 ("global", global_config.observability.report_enabled),
                 ("fixture", fixture.report_enabled),
                 ("cli", overrides.get("report_enabled")),
             ],
-            "sn_required": [("default", False), ("fixture", fixture.sn_required), ("cli", overrides.get("sn_required"))],
+            "sn_required": [
+                ("default", False),
+                ("fixture", fixture.sn_required),
+                ("cli", overrides.get("sn_required")),
+            ],
         }
         for key, chain in values.items():
             runtime[key], sources[key] = self._choose_value(chain)
@@ -249,7 +331,11 @@ class ConfigResolver:
         runtime: dict[str, Any] = {}
         sources: dict[str, dict[str, Any]] = {}
         values = {
-            "execution": [("default", "sequential"), ("case", case_spec.execution), ("cli", overrides.get("execution"))],
+            "execution": [
+                ("default", "sequential"),
+                ("case", case_spec.execution),
+                ("cli", overrides.get("execution")),
+            ],
             "timeout": [
                 ("global", global_config.runtime.default_timeout),
                 ("case", case_spec.timeout),
@@ -266,11 +352,18 @@ class ConfigResolver:
                 ("cli", overrides.get("retry_interval")),
             ],
             "resource_lock_quarantine_seconds": [
-                ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
+                (
+                    "global",
+                    global_config.runtime.default_resource_lock_quarantine_seconds,
+                ),
                 ("case", case_spec.resource_lock_quarantine_seconds),
                 ("cli", overrides.get("resource_lock_quarantine_seconds")),
             ],
-            "stop_on_failure": [("default", False), ("case", case_spec.stop_on_failure), ("cli", overrides.get("stop_on_failure"))],
+            "stop_on_failure": [
+                ("default", False),
+                ("case", case_spec.stop_on_failure),
+                ("cli", overrides.get("stop_on_failure")),
+            ],
         }
         for key, chain in values.items():
             runtime[key], sources[key] = self._choose_value(chain)
@@ -313,19 +406,38 @@ class ConfigResolver:
                     ("cli", overrides.get("retry_interval")),
                 ]
             )
-            case_resource_lock_quarantine_seconds, case_resource_lock_quarantine_source = self._choose_value(
+            (
+                case_resource_lock_quarantine_seconds,
+                case_resource_lock_quarantine_source,
+            ) = self._choose_value(
                 [
-                    ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
-                    ("fixture", fixture.resource_lock_quarantine_seconds if fixture else None),
+                    (
+                        "global",
+                        global_config.runtime.default_resource_lock_quarantine_seconds,
+                    ),
+                    (
+                        "fixture",
+                        fixture.resource_lock_quarantine_seconds if fixture else None,
+                    ),
                     ("case", case_spec.resource_lock_quarantine_seconds),
                     ("cli", overrides.get("resource_lock_quarantine_seconds")),
                 ]
             )
             case_execution, case_execution_source = self._choose_value(
-                [("default", "sequential"), ("fixture", fixture.execution if fixture else None), ("case", case_spec.execution), ("cli", overrides.get("execution"))]
+                [
+                    ("default", "sequential"),
+                    ("fixture", fixture.execution if fixture else None),
+                    ("case", case_spec.execution),
+                    ("cli", overrides.get("execution")),
+                ]
             )
             case_stop_on_failure, case_stop_on_failure_source = self._choose_value(
-                [("default", False), ("fixture", fixture.stop_on_failure if fixture else None), ("case", case_spec.stop_on_failure), ("cli", overrides.get("stop_on_failure"))]
+                [
+                    ("default", False),
+                    ("fixture", fixture.stop_on_failure if fixture else None),
+                    ("case", case_spec.stop_on_failure),
+                    ("cli", overrides.get("stop_on_failure")),
+                ]
             )
             case_resources, case_resources_template_sources = self._resolve_templates(
                 list(case_spec.resources),
@@ -361,31 +473,45 @@ class ConfigResolver:
                         ("cli", overrides.get("retry_interval")),
                     ]
                 )
-                resource_lock_quarantine_seconds, resource_lock_quarantine_source = self._choose_value(
-                    [
-                        ("global", global_config.runtime.default_resource_lock_quarantine_seconds),
-                        ("fixture", fixture.resource_lock_quarantine_seconds if fixture else None),
-                        ("case", case_spec.resource_lock_quarantine_seconds),
-                        ("function", function.resource_lock_quarantine_seconds),
-                        ("cli", overrides.get("resource_lock_quarantine_seconds")),
-                    ]
+                resource_lock_quarantine_seconds, resource_lock_quarantine_source = (
+                    self._choose_value(
+                        [
+                            (
+                                "global",
+                                global_config.runtime.default_resource_lock_quarantine_seconds,
+                            ),
+                            (
+                                "fixture",
+                                fixture.resource_lock_quarantine_seconds
+                                if fixture
+                                else None,
+                            ),
+                            ("case", case_spec.resource_lock_quarantine_seconds),
+                            ("function", function.resource_lock_quarantine_seconds),
+                            ("cli", overrides.get("resource_lock_quarantine_seconds")),
+                        ]
+                    )
                 )
                 params, template_sources = self._resolve_templates(
                     function.params,
                     context,
                     field_path=f"cases.{case_spec.case_name}.functions[{index}].params",
                 )
-                function_resources, function_resource_template_sources = self._resolve_templates(
-                    list(function.resources),
-                    context,
-                    field_path=f"cases.{case_spec.case_name}.functions[{index}].resources",
+                function_resources, function_resource_template_sources = (
+                    self._resolve_templates(
+                        list(function.resources),
+                        context,
+                        field_path=f"cases.{case_spec.case_name}.functions[{index}].resources",
+                    )
                 )
                 effective_resources, resource_source = self._resolve_function_resources(
                     case_spec=case_spec,
                     case_resources=case_resources,
                     function=function,
                     function_resources=function_resources,
-                    resolved_interfaces=context.get("resolved", {}).get("interfaces", {}),
+                    resolved_interfaces=context.get("resolved", {}).get(
+                        "interfaces", {}
+                    ),
                 )
                 functions.append(
                     FunctionInvocationSpec(
@@ -409,7 +535,10 @@ class ConfigResolver:
                     "resource_lock_quarantine_seconds": resource_lock_quarantine_source,
                     "templates": template_sources,
                     "resource_templates": function_resource_template_sources,
-                    "resources": {"source": resource_source, "value": copy.deepcopy(effective_resources)},
+                    "resources": {
+                        "source": resource_source,
+                        "value": copy.deepcopy(effective_resources),
+                    },
                 }
 
             resolved_cases.append(
@@ -438,7 +567,10 @@ class ConfigResolver:
                 "resource_lock_quarantine_seconds": case_resource_lock_quarantine_source,
                 "stop_on_failure": case_stop_on_failure_source,
                 "resource_templates": case_resources_template_sources,
-                "resources": {"source": "case" if case_resources else "derived", "value": copy.deepcopy(case_resources)},
+                "resources": {
+                    "source": "case" if case_resources else "derived",
+                    "value": copy.deepcopy(case_resources),
+                },
                 "functions": function_trace,
             }
         return resolved_cases, trace
@@ -456,7 +588,11 @@ class ConfigResolver:
             return self._dedupe_strings(function_resources), "function"
         if case_resources:
             return self._dedupe_strings(case_resources), "case"
-        return self._derive_resources(case_spec=case_spec, function=function, resolved_interfaces=resolved_interfaces), "derived"
+        return self._derive_resources(
+            case_spec=case_spec,
+            function=function,
+            resolved_interfaces=resolved_interfaces,
+        ), "derived"
 
     def _derive_resources(
         self,
@@ -490,12 +626,16 @@ class ConfigResolver:
             ordered.append(normalized)
         return ordered
 
-    def _resolve_templates(self, value: Any, context: dict[str, Any], *, field_path: str) -> tuple[Any, dict[str, str]]:
+    def _resolve_templates(
+        self, value: Any, context: dict[str, Any], *, field_path: str
+    ) -> tuple[Any, dict[str, str]]:
         if isinstance(value, dict):
             resolved: dict[str, Any] = {}
             sources: dict[str, str] = {}
             for key, item in value.items():
-                next_value, nested_sources = self._resolve_templates(item, context, field_path=f"{field_path}.{key}")
+                next_value, nested_sources = self._resolve_templates(
+                    item, context, field_path=f"{field_path}.{key}"
+                )
                 resolved[key] = next_value
                 sources.update(nested_sources)
             return resolved, sources
@@ -503,7 +643,9 @@ class ConfigResolver:
             resolved_list: list[Any] = []
             sources_list: dict[str, str] = {}
             for index, item in enumerate(value):
-                next_value, nested_sources = self._resolve_templates(item, context, field_path=f"{field_path}[{index}]")
+                next_value, nested_sources = self._resolve_templates(
+                    item, context, field_path=f"{field_path}[{index}]"
+                )
                 resolved_list.append(next_value)
                 sources_list.update(nested_sources)
             return resolved_list, sources_list
@@ -516,7 +658,9 @@ class ConfigResolver:
 
         if len(matches) == 1 and matches[0].span() == (0, len(value)):
             token = matches[0].group(1).strip()
-            return copy.deepcopy(self._lookup_context(token, context, field_path)), {field_path: token}
+            return copy.deepcopy(self._lookup_context(token, context, field_path)), {
+                field_path: token
+            }
 
         result = value
         sources_str: dict[str, str] = {}
@@ -532,7 +676,9 @@ class ConfigResolver:
             sources_str[field_path] = token
         return result, sources_str
 
-    def _lookup_context(self, path: str, context: dict[str, Any], field_path: str) -> Any:
+    def _lookup_context(
+        self, path: str, context: dict[str, Any], field_path: str
+    ) -> Any:
         current: Any = context
         for segment in path.split("."):
             if not isinstance(current, dict) or segment not in current:
@@ -558,4 +704,7 @@ class ConfigResolver:
             if value is not None:
                 selected_source = source
                 selected_value = value
-        return selected_value, {"source": selected_source, "value": copy.deepcopy(selected_value)}
+        return selected_value, {
+            "source": selected_source,
+            "value": copy.deepcopy(selected_value),
+        }

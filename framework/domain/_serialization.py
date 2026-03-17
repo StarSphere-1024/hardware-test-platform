@@ -15,7 +15,10 @@ def serialize_value(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
     if is_dataclass(value):
-        return {item.name: serialize_value(getattr(value, item.name)) for item in fields(value)}
+        return {
+            item.name: serialize_value(getattr(value, item.name))
+            for item in fields(value)
+        }
     if isinstance(value, Path):
         return str(value)
     if isinstance(value, dict):

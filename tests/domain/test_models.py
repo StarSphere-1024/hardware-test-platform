@@ -6,9 +6,21 @@ from pathlib import Path
 
 from framework.config.resolver import ConfigResolver
 from framework.domain.events import EventRecord, EventStatus, EventType, ExecutionEvent
-from framework.domain.execution import ArtifactDirectories, ExecutionContext, ExecutionPlan, ExecutionTask, RetryPolicy
+from framework.domain.execution import (
+    ArtifactDirectories,
+    ExecutionContext,
+    ExecutionPlan,
+    ExecutionTask,
+    RetryPolicy,
+)
 from framework.domain.requests import ExecutionRequest
-from framework.domain.results import DashboardSnapshot, ExecutionResult, ReportArtifact, ResultSnapshot, ResultStatus
+from framework.domain.results import (
+    DashboardSnapshot,
+    ExecutionResult,
+    ReportArtifact,
+    ResultSnapshot,
+    ResultStatus,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -40,7 +52,11 @@ def test_execution_context_serializes_with_resolved_config() -> None:
         task_type="fixture",
         name="linux_host_pc",
         execution_mode="sequential",
-        payload={"fixture": resolved_config.fixture.to_dict() if resolved_config.fixture else None},
+        payload={
+            "fixture": resolved_config.fixture.to_dict()
+            if resolved_config.fixture
+            else None
+        },
         timeout=resolved_config.resolved_runtime["timeout"],
         retry_policy=RetryPolicy(
             max_retries=resolved_config.resolved_runtime["retry"],
@@ -70,7 +86,10 @@ def test_execution_context_serializes_with_resolved_config() -> None:
 
     payload = context.to_dict()
 
-    assert payload["resolved_config"]["cases"][0]["functions"][0]["params"]["interface"] == "eno1"
+    assert (
+        payload["resolved_config"]["cases"][0]["functions"][0]["params"]["interface"]
+        == "eno1"
+    )
     assert payload["artifacts_dir"]["tmp_dir"].endswith("tmp")
     json.dumps(plan.to_dict())
     json.dumps(payload)
@@ -88,7 +107,13 @@ def test_execution_result_snapshot_and_dashboard_are_serializable() -> None:
         message="ping ok",
         details={"interface": "eno1"},
         metrics={"avg_latency_ms": 1.2},
-        artifacts=[ReportArtifact(artifact_type="json", uri="reports/eth.json", content_type="application/json")],
+        artifacts=[
+            ReportArtifact(
+                artifact_type="json",
+                uri="reports/eth.json",
+                content_type="application/json",
+            )
+        ],
         started_at=started_at,
         finished_at=finished_at,
         duration_ms=1000,
@@ -126,7 +151,10 @@ def test_execution_result_snapshot_and_dashboard_are_serializable() -> None:
     dashboard_payload = dashboard.to_dict()
 
     assert result_payload["children"][0]["status"] == "passed"
-    assert snapshot_payload["results"][0]["children"][0]["artifacts"][0]["artifact_type"] == "json"
+    assert (
+        snapshot_payload["results"][0]["children"][0]["artifacts"][0]["artifact_type"]
+        == "json"
+    )
     assert dashboard_payload["overall_status"] == "passed"
     json.dumps(snapshot_payload)
     json.dumps(dashboard_payload)

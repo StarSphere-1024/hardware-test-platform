@@ -12,7 +12,11 @@ def test_gpio_mapping(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
-    registry = capability_registry or getattr(execution_context, "capability_registry", None) or {}
+    registry = (
+        capability_registry
+        or getattr(execution_context, "capability_registry", None)
+        or {}
+    )
     gpio = registry.get("gpio")
     if gpio is None:
         return {
@@ -26,7 +30,8 @@ def test_gpio_mapping(
     return {
         "code": 0 if success else -1,
         "status": "passed" if success else "failed",
-        "message": description.get("message") or (
+        "message": description.get("message")
+        or (
             f"gpio mapping ok for physical pin {physical_pin}"
             if success
             else f"gpio mapping unavailable for physical pin {physical_pin}"

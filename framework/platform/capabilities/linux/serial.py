@@ -99,5 +99,9 @@ class LinuxSerialCapability(SerialCapabilityContract):
             return [item for item in value if isinstance(item, str)]
         if isinstance(value, dict):
             items = value.get("items")
-            return [item for item in items if isinstance(item, str)] if isinstance(items, list) else []
+            return (
+                [item for item in items if isinstance(item, str)]
+                if isinstance(items, list)
+                else []
+            )
         return []

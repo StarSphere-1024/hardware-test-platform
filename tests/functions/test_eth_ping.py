@@ -17,7 +17,10 @@ class _FakeNetworkCapability:
             "target": target_ip,
             "interface": interface,
             "return_code": 0,
-            "stdout": "1 packets transmitted, 1 received, 0% packet loss\nrtt min/avg/max/mdev = 0.010/1.234/2.000/0.100 ms\n",
+            "stdout": (
+                "1 packets transmitted, 1 received, 0% packet loss\n"
+                "rtt min/avg/max/mdev = 0.010/1.234/2.000/0.100 ms\n"
+            ),
             "stderr": "",
             "packet_loss": 0.0,
             "avg_latency_ms": 1.234,

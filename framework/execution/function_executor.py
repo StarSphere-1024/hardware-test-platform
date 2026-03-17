@@ -95,9 +95,15 @@ class FunctionExecutor:
                 details={
                     "params": dict(params),
                     "residual_risk": {
-                        "kind": "timeout_background_execution_unknown",
-                        "message": "timeout returned before the worker could be confirmed stopped",
-                        "operator_action": "inspect hardware state before immediate retry if the function has side effects",
+                        "kind": "timeout-background_execution_unknown",
+                        "message": (
+                            "timeout returned before the worker "
+                            "could be confirmed stopped"
+                        ),
+                        "operator_action": (
+                            "inspect hardware state before immediate retry "
+                            "if the function has side effects"
+                        ),
                     },
                 },
             )
@@ -294,7 +300,8 @@ class FunctionExecutor:
             )
             passed = self._evaluate_expectation(operator, actual_value, expected_value)
             logger.debug(
-                "FunctionExecutor._apply_expectations: rule field=%s operator=%s passed=%s",
+                "FunctionExecutor._apply_expectations: "
+                "rule field=%s operator=%s passed=%s",
                 field_path,
                 operator,
                 passed,

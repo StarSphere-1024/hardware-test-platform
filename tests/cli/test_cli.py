@@ -237,7 +237,8 @@ def test_run_function_cli_auto_detects_workspace_root_from_subdir(
     module_path = tmp_path / "sample_funcs.py"
     module_path.write_text(
         "def ping_once(target_ip, count=1):\n"
-        "    return {'code': 0, 'message': f'ping {target_ip} x{count}', 'details': {'target_ip': target_ip, 'count': count}}\n",
+        "    return {'code': 0, 'message': f'ping {target_ip} x{count}', "
+        "'details': {'target_ip': target_ip, 'count': count}}\n",
         encoding="utf-8",
     )
     monkeypatch.syspath_prepend(str(tmp_path))
@@ -280,7 +281,10 @@ def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(
             "target": target_ip,
             "interface": interface,
             "return_code": 0,
-            "stdout": "1 packets transmitted, 1 received, 0% packet loss\nrtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n",
+            "stdout": (
+                "1 packets transmitted, 1 received, 0% packet loss\n"
+                "rtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n"
+            ),
             "stderr": "",
             "packet_loss": 0.0,
             "avg_latency_ms": 0.321,
@@ -409,7 +413,10 @@ def test_run_case_cli_auto_discovers_real_eth_function(
             "target": target_ip,
             "interface": interface,
             "return_code": 0,
-            "stdout": "1 packets transmitted, 1 received, 0% packet loss\nrtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n",
+            "stdout": (
+                "1 packets transmitted, 1 received, 0% packet loss\n"
+                "rtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n"
+            ),
             "stderr": "",
             "packet_loss": 0.0,
             "avg_latency_ms": 0.321,
@@ -572,7 +579,8 @@ def test_run_function_cli_imports_callable_and_executes(
     module_path = tmp_path / "sample_funcs.py"
     module_path.write_text(
         "def ping_once(target_ip, count=1):\n"
-        "    return {'code': 0, 'message': f'ping {target_ip} x{count}', 'details': {'target_ip': target_ip, 'count': count}}\n",
+        "    return {'code': 0, 'message': f'ping {target_ip} x{count}', "
+        "'details': {'target_ip': target_ip, 'count': count}}\n",
         encoding="utf-8",
     )
     monkeypatch.syspath_prepend(str(tmp_path))

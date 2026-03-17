@@ -187,7 +187,10 @@ class ConfigResolver:
     ) -> None:
         if board.supported_cases and case_spec.case_name not in board.supported_cases:
             raise ProfileNotSupportedError(
-                f"case '{case_spec.case_name}' is not allowed by board profile '{board.profile_name}'",
+                (
+                    f"case '{case_spec.case_name}' is not allowed by "
+                    f"board profile '{board.profile_name}'"
+                ),
                 field_path="supported_cases",
                 source=case_source,
             )
@@ -206,7 +209,11 @@ class ConfigResolver:
             and fixture.board_profile != case_spec.board_profile
         ):
             raise ProfileNotSupportedError(
-                f"case '{case_spec.case_name}' declares board profile '{case_spec.board_profile}' but fixture '{fixture.fixture_name}' declares '{fixture.board_profile}'",
+                (
+                    f"case '{case_spec.case_name}' declares board profile "
+                    f"'{case_spec.board_profile}' but fixture '{fixture.fixture_name}' "
+                    f"declares '{fixture.board_profile}'"
+                ),
                 field_path="board_profile",
                 source=case_source,
             )
@@ -215,7 +222,11 @@ class ConfigResolver:
             and case_spec.board_profile != resolved_board_profile
         ):
             raise ProfileNotSupportedError(
-                f"case '{case_spec.case_name}' declares board profile '{case_spec.board_profile}' but resolved board profile is '{resolved_board_profile}'",
+                (
+                    f"case '{case_spec.case_name}' declares board profile "
+                    f"'{case_spec.board_profile}' but resolved board profile is "
+                    f"'{resolved_board_profile}'"
+                ),
                 field_path="board_profile",
                 source=case_source,
             )
@@ -564,7 +575,9 @@ class ConfigResolver:
                 "timeout": case_timeout_source,
                 "retry": case_retry_source,
                 "retry_interval": case_retry_interval_source,
-                "resource_lock_quarantine_seconds": case_resource_lock_quarantine_source,
+                "resource_lock_quarantine_seconds": (
+                    case_resource_lock_quarantine_source
+                ),
                 "stop_on_failure": case_stop_on_failure_source,
                 "resource_templates": case_resources_template_sources,
                 "resources": {

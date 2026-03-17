@@ -33,7 +33,8 @@ def _patch_quick_validation_capabilities(
             "interface": interface,
             "return_code": 0 if eth_success else 1,
             "stdout": (
-                "1 packets transmitted, 1 received, 0% packet loss\nrtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n"
+                "1 packets transmitted, 1 received, 0% packet loss\n"
+                "rtt min/avg/max/mdev = 0.010/0.321/1.000/0.100 ms\n"
                 if eth_success
                 else "1 packets transmitted, 0 received, 100% packet loss\n"
             ),

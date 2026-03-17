@@ -445,11 +445,14 @@ class CLIDashboard:
         storage_pct = self._to_float(storage.get("usage_percent"))
         cpu_line = (
             f"CPU: {self._bar(cpu_pct)} {self._fmt_pct(cpu_pct)}  "
-            f"freq: {cpu.get('frequency_mhz', 'N/A')}MHz  temp: {cpu.get('temperature', 'N/A')}°C"
+            f"freq: {cpu.get('frequency_mhz', 'N/A')}MHz  "
+            f"temp: {cpu.get('temperature', 'N/A')}°C"
         )
         mem_line = (
-            f"MEM: {self._bar(mem_pct)} {memory.get('used_mb', 'N/A')}/{memory.get('total_mb', 'N/A')}MB  "
-            f"DISK: {self._bar(storage_pct)} {storage.get('used_gb', 'N/A')}/{storage.get('total_gb', 'N/A')}GB"
+            f"MEM: {self._bar(mem_pct)} {memory.get('used_mb', 'N/A')}/"
+            f"{memory.get('total_mb', 'N/A')}MB  "
+            f"DISK: {self._bar(storage_pct)} {storage.get('used_gb', 'N/A')}/"
+            f"{storage.get('total_gb', 'N/A')}GB"
         )
         return Panel(f"{cpu_line}\n{mem_line}", title="System")
 
@@ -496,16 +499,14 @@ class CLIDashboard:
         if not lines:
             for case in state["cases"]:
                 if case.get("status") in {"failed", "aborted", "timeout"}:
-                    lines.append(
-                        f"{case.get('name')}: {case.get('message') or case.get('status')}"
-                    )
+                    msg = case.get("message") or case.get("status")
+                    lines.append(f"{case.get('name')}: {msg}")
         if not lines:
             for event in reversed(state["events"]):
                 event_payload = event.get("event", {})
                 if event_payload.get("status") == "error":
-                    lines.append(
-                        f"{event_payload.get('task_name')}: {event_payload.get('message')}"
-                    )
+                    msg = event_payload.get("message")
+                    lines.append(f"{event_payload.get('task_name')}: {msg}")
                 if len(lines) >= 3:
                     break
         if not lines:

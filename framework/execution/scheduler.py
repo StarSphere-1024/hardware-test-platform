@@ -92,7 +92,10 @@ class Scheduler:
 
         if task.execution_mode not in {"sequential", "parallel"}:
             raise UnsupportedExecutionModeError(
-                f"unsupported task execution mode: {task.task_id} -> {task.execution_mode}"
+                (
+                    f"unsupported task execution mode: {task.task_id} "
+                    f"-> {task.execution_mode}"
+                )
             )
 
         observer = self._observer_from_context(context)
@@ -162,7 +165,8 @@ class Scheduler:
         resources = self._resolve_task_resources(task)
 
         logger.debug(
-            "Scheduler._execute_function_task: task %s (%s) with max_retries=%d, resources=%s",
+            "Scheduler._execute_function_task: "
+            "task %s (%s) with max_retries=%d, resources=%s",
             task.task_id,
             task.name,
             max_retries,
@@ -184,7 +188,9 @@ class Scheduler:
             result: ExecutionResult | None = None
             if resources:
                 logger.debug(
-                    "Scheduler._execute_function_task: attempting resource lock acquisition for task %s, attempt %d",
+                    "Scheduler._execute_function_task: "
+                    "attempting resource lock acquisition for "
+                    "task %s, attempt %d",
                     task.task_id,
                     attempt + 1,
                 )
@@ -196,7 +202,8 @@ class Scheduler:
                 )
                 if not lock_info.get("acquired"):
                     logger.debug(
-                        "Scheduler._execute_function_task: resource lock acquisition failed for task %s: %s",
+                        "Scheduler._execute_function_task: "
+                        "resource lock acquisition failed for task %s: %s",
                         task.task_id,
                         lock_info.get("reason"),
                     )
@@ -224,7 +231,8 @@ class Scheduler:
 
             try:
                 logger.debug(
-                    "Scheduler._execute_function_task: executing function %s (attempt %d)",
+                    "Scheduler._execute_function_task: "
+                    "executing function %s (attempt %d)",
                     task.task_id,
                     attempt + 1,
                 )
@@ -242,7 +250,9 @@ class Scheduler:
                         else 0
                     )
                     logger.debug(
-                        "Scheduler._execute_function_task: releasing resources for task %s, quarantine=%ds, reason=%s",
+                        "Scheduler._execute_function_task: "
+                        "releasing resources for task %s, "
+                        "quarantine=%ds, reason=%s",
                         task.task_id,
                         quarantine_seconds,
                         release_status,
@@ -263,7 +273,8 @@ class Scheduler:
             self._attach_lock_details(result, lock_info, release_info)
             if not should_retry(result.status, attempt, max_retries):
                 logger.debug(
-                    "Scheduler._execute_function_task: task %s completed with status %s",
+                    "Scheduler._execute_function_task: "
+                    "task %s completed with status %s",
                     task.task_id,
                     result.status,
                 )
@@ -272,7 +283,8 @@ class Scheduler:
                     observer.on_task_finished(task, result, plan_id=plan_id)
                 return result
             logger.debug(
-                "Scheduler._execute_function_task: task %s will be retried (attempt %d of %d)",
+                "Scheduler._execute_function_task: "
+                "task %s will be retried (attempt %d of %d)",
                 task.task_id,
                 attempt + 1,
                 max_retries + 1,
@@ -372,7 +384,8 @@ class Scheduler:
                             break
                         unresolved = ", ".join(sorted(pending))
                         raise TaskExecutionError(
-                            f"parallel scheduling stalled, unresolved dependencies: {unresolved}"
+                            "parallel scheduling stalled, "
+                            f"unresolved dependencies: {unresolved}"
                         )
                     break
 

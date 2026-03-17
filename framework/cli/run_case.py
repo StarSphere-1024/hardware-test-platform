@@ -27,7 +27,10 @@ def _build_fixture_misuse_hint(args) -> str | None:
 
     config_path = Path(args.config)
     if "fixtures" in config_path.parts:
-        return f"detected fixture config '{args.config}', use: python -m framework.cli.run_fixture --config {args.config}"
+        return (
+            f"detected fixture config '{args.config}', "
+            "use: python -m framework.cli.run_fixture --config {args.config}"
+        )
 
     if config_path.suffix.lower() != ".json":
         return None
@@ -42,7 +45,10 @@ def _build_fixture_misuse_hint(args) -> str | None:
         return None
 
     if isinstance(data, dict) and "fixture_name" in data and "case_name" not in data:
-        return f"detected fixture config '{args.config}', use: python -m framework.cli.run_fixture --config {args.config}"
+        return (
+            f"detected fixture config '{args.config}', "
+            "use: python -m framework.cli.run_fixture --config {args.config}"
+        )
     return None
 
 

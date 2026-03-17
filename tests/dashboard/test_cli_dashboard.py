@@ -332,7 +332,9 @@ def test_dashboard_recent_failures_prefers_failed_function_messages(
                                     "task_type": "function",
                                     "name": "test_uart_loopback",
                                     "status": "timeout",
-                                    "message": "function 'test_uart_loopback' timed out after 5s",
+                                    "message": (
+                                        "function 'test_uart_loopback' timed out after 5s"
+                                    ),
                                 }
                             ],
                         },
@@ -357,8 +359,8 @@ def test_dashboard_recent_failures_prefers_failed_function_messages(
 
     assert "eth_case / test_eth_ping: ethernet peer must be reachable" in rendered
     assert (
-        "uart_case / test_uart_loopback: function 'test_uart_loopback' timed out after 5s"
-        in rendered
+        "uart_case / test_uart_loopback: "
+        "function 'test_uart_loopback' timed out after 5s" in rendered
     )
     assert "case completed: failed=1" not in rendered
 

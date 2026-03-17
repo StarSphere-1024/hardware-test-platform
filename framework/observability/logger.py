@@ -105,9 +105,13 @@ class ExecutionObserver:
                 message="execution plan created",
                 payload={
                     "target_type": self.resolved_config.request.get("kind", "fixture"),
-                    "target_name": self.resolved_config.request.get("fixture_path")
-                    or self.resolved_config.request.get("case_path"),
-                    "selected_board_profile": self.resolved_config.board_profile.profile_name,
+                    "target_name": (
+                        self.resolved_config.request.get("fixture_path")
+                        or self.resolved_config.request.get("case_path")
+                    ),
+                    "selected_board_profile": (
+                        self.resolved_config.board_profile.profile_name
+                    ),
                     "resolved_case_count": len(self.resolved_config.cases),
                 },
                 plan_id=plan.plan_id,

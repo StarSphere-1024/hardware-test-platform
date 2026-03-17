@@ -83,7 +83,10 @@ class ReportGenerator:
         lines.extend(
             [
                 "",
-                f"Root Result: {root_result.name} ({root_result.task_type}) -> {root_result.status}",
+                (
+                    f"Root Result: {root_result.name} ({root_result.task_type}) "
+                    f"-> {root_result.status}"
+                ),
                 f"Message: {root_result.message or ''}",
             ]
         )

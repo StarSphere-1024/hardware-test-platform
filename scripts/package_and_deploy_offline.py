@@ -38,7 +38,10 @@ def quote_args(values: list[str]) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Deploy hardware-test-platform sources and offline dependencies to a remote board.",
+        description=(
+            "Deploy hardware-test-platform sources and offline "
+            "dependencies to a remote board."
+        ),
     )
     parser.add_argument("host", nargs="?", default=os.getenv("REMOTE_HOST"))
     parser.add_argument("user", nargs="?", default=os.getenv("REMOTE_USER"))
@@ -120,7 +123,8 @@ def ensure_dependency_artifacts(
     runtime_missing = not any(wheelhouse.iterdir())
     if runtime_missing and not download_missing:
         raise RuntimeError(
-            f"wheelhouse is empty: {wheelhouse}. Use --download-missing or pre-populate it first.",
+            f"wheelhouse is empty: {wheelhouse}. "
+            "Use --download-missing or pre-populate it first.",
         )
 
     if download_missing:
@@ -318,24 +322,38 @@ def deploy_to_remote(
         remote_setup_lines.extend(
             [
                 f"if [ ! -x '{remote_venv}/bin/python' ]; then",
-                f"  echo '[ERROR] remote venv missing at {remote_venv}; rerun without --skip-venv or --fast-reuse to create it'",
+                (
+                    "  echo '[ERROR] remote venv missing at {remote_venv}; "
+                    "rerun without --skip-venv or --fast-reuse to create it'"
+                ),
                 "  exit 2",
                 "fi",
             ]
         )
     if not skip_deps:
         remote_setup_lines.append(
-            f"'{remote_venv}/bin/pip' install --no-index --find-links='{remote_wheelhouse}' {quote_args(CORE_DEPENDENCIES)}"
+            f"'{remote_venv}/bin/pip' install --no-index "
+            f"--find-links='{remote_wheelhouse}' {quote_args(CORE_DEPENDENCIES)}"
         )
         if not skip_psutil:
             remote_setup_lines.extend(
                 [
                     "if command -v gcc >/dev/null 2>&1; then",
-                    f"  if ! '{remote_venv}/bin/pip' install --no-index --find-links='{remote_wheelhouse}' {quote_args(OPTIONAL_DEPENDENCIES)}; then",
-                    "    echo '[WARN] optional psutil install failed; dashboard system metrics will be unavailable'",
+                    (
+                        f"  if ! '{remote_venv}/bin/pip' install --no-index "
+                        f"--find-links='{remote_wheelhouse}' "
+                        f"{quote_args(OPTIONAL_DEPENDENCIES)}; then"
+                    ),
+                    (
+                        "    echo '[WARN] optional psutil install failed; "
+                        "dashboard system metrics will be unavailable'"
+                    ),
                     "  fi",
                     "else",
-                    "  echo '[WARN] gcc not found on remote host, skip optional psutil install'",
+                    (
+                        "  echo '[WARN] gcc not found on remote host, "
+                        "skip optional psutil install'"
+                    ),
                     "fi",
                 ]
             )

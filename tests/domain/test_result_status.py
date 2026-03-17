@@ -236,7 +236,8 @@ class TestStatusAggregation:
             ),
         ]
         # Running tasks should not make the aggregate fail
-        # Current behavior: running is not a terminal status, so aggregation depends on implementation
+        # Current behavior: running is not a terminal status,
+        # so aggregation depends on implementation
         result = aggregate_status(children)
         # The aggregation should handle running appropriately
         assert result in {ResultStatus.RUNNING, ResultStatus.FAILED}

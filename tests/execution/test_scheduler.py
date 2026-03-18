@@ -12,7 +12,6 @@ from framework.execution.fixture_runner import FixtureRunner
 from framework.execution.function_executor import FunctionExecutor
 from framework.execution.scheduler import Scheduler
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -513,9 +512,8 @@ def test_scheduler_parallel_timeout_does_not_cancel_in_flight_tasks() -> None:
     )
 
 
-def test_scheduler_parallel_shared_resource_conflict_aborts_unsubmitted_dependents() -> (
-    None
-):
+def test_scheduler_parallel_shared_resource_conflict_aborts_unsubmitted_dependents(
+) -> None:
     resolver = ConfigResolver(REPO_ROOT)
     resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     parallel_case = copy.deepcopy(resolved_config.cases[0])
@@ -599,9 +597,8 @@ def test_scheduler_parallel_shared_resource_conflict_aborts_unsubmitted_dependen
     )
 
 
-def test_scheduler_parallel_dependency_chain_aborts_unsubmitted_descendants_after_failure() -> (
-    None
-):
+def test_scheduler_parallel_dependency_chain_aborts_unsubmitted_descendants_after_failure(  # noqa: E501
+) -> None:
     resolver = ConfigResolver(REPO_ROOT)
     resolved_config = resolver.resolve_fixture("fixtures/linux_host_pc.json")
     parallel_case = copy.deepcopy(resolved_config.cases[0])

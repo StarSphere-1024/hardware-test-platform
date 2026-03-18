@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -127,7 +127,7 @@ class ExecutionObserver:
     ) -> None:
         with self._lock:
             self.task_states[task.task_id] = ResultStatus.RUNNING.value
-            self.task_started_at.setdefault(task.task_id, datetime.now(timezone.utc))
+            self.task_started_at.setdefault(task.task_id, datetime.now(UTC))
             self._append_event(
                 event_type=EventType.TASK_STARTED,
                 status=EventStatus.INFO,
@@ -269,7 +269,7 @@ class ExecutionObserver:
         snapshot = ResultSnapshot(
             request_id=self.request_id,
             plan_id=plan_id,
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
             current_status=fixture_summary.get(
                 "status", self._infer_current_status(counters)
             ),
@@ -356,7 +356,7 @@ class ExecutionObserver:
         duration_ms = None
         if started_at is not None and inferred_status == ResultStatus.RUNNING.value:
             duration_ms = int(
-                (datetime.now(timezone.utc) - started_at).total_seconds() * 1000
+                (datetime.now(UTC) - started_at).total_seconds() * 1000
             )
         return {
             "task_id": task.task_id,
@@ -470,7 +470,7 @@ class ExecutionObserver:
             request_id=self.request_id,
             plan_id=plan_id,
             event_type=event_type,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             status=status,
             task_id=task.task_id if task else None,
             task_type=task.task_type if task else None,

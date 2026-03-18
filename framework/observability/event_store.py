@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from framework.domain.events import EventRecord, ExecutionEvent
@@ -24,7 +24,7 @@ class EventStore:
         record = EventRecord(
             sequence=sequence,
             event=event,
-            stored_at=datetime.now(timezone.utc),
+            stored_at=datetime.now(UTC),
             storage_metadata={"source": source},
         )
         path = self.event_log_path(event.request_id)

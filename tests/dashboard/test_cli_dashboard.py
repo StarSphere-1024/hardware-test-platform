@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from rich.console import Console
 
 from framework.dashboard.cli_dashboard import CLIDashboard, DashboardDataSource
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -34,7 +33,7 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
             "request_id": request_id,
             "plan_id": "plan.linux_host_pc",
             "updated_at": datetime(
-                2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc
+                2026, 3, 6, 12, 0, 0, tzinfo=UTC
             ).isoformat(),
             "current_status": "aborted",
             "fixture": {"name": "linux_host_pc", "status": "aborted"},
@@ -45,7 +44,7 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
                     "message": "ping failed",
                     "summary": {"failed": 1},
                     "started_at": datetime(
-                        2026, 3, 6, 11, 59, 30, tzinfo=timezone.utc
+                        2026, 3, 6, 11, 59, 30, tzinfo=UTC
                     ).isoformat(),
                     "duration_ms": 12000,
                 },
@@ -55,7 +54,7 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
                     "message": "aborted by stop_on_failure",
                     "summary": {"aborted": 1},
                     "started_at": datetime(
-                        2026, 3, 6, 11, 59, 42, tzinfo=timezone.utc
+                        2026, 3, 6, 11, 59, 42, tzinfo=UTC
                     ).isoformat(),
                     "duration_ms": 0,
                 },
@@ -72,7 +71,7 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
             {
                 "sequence": 1,
                 "stored_at": datetime(
-                    2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc
+                    2026, 3, 6, 12, 0, 0, tzinfo=UTC
                 ).isoformat(),
                 "storage_metadata": {"source": "scheduler"},
                 "event": {
@@ -81,7 +80,7 @@ def test_dashboard_collects_current_snapshot_state(tmp_path: Path) -> None:
                     "plan_id": "plan.linux_host_pc",
                     "event_type": "task_retried",
                     "timestamp": datetime(
-                        2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc
+                        2026, 3, 6, 12, 0, 0, tzinfo=UTC
                     ).isoformat(),
                     "status": "warning",
                     "task_name": "test_eth_ping",
@@ -146,7 +145,7 @@ def test_dashboard_module_table_shows_case_runtime(tmp_path: Path) -> None:
                 "name": "eth_case",
                 "status": "running",
                 "summary": {"running": 1},
-                "started_at": datetime.now(timezone.utc).isoformat(),
+                "started_at": datetime.now(UTC).isoformat(),
             },
             {
                 "name": "uart_case",
@@ -170,7 +169,7 @@ def test_dashboard_runtime_prefers_live_running_elapsed_over_stale_duration() ->
     runtime_text = dashboard._case_runtime_display(
         {
             "status": "running",
-            "started_at": datetime.now(timezone.utc).isoformat(),
+            "started_at": datetime.now(UTC).isoformat(),
             "duration_ms": 0,
         }
     )
@@ -194,7 +193,7 @@ def test_dashboard_running_runtime_is_quantized_to_whole_seconds() -> None:
 
 def test_dashboard_running_runtime_uses_monotonic_baseline(monkeypatch) -> None:
     dashboard = CLIDashboard(workspace_root=REPO_ROOT)
-    started_at = datetime(2026, 3, 12, 10, 0, 0, tzinfo=timezone.utc)
+    started_at = datetime(2026, 3, 12, 10, 0, 0, tzinfo=UTC)
     case = {
         "name": "eth_case",
         "status": "running",
@@ -276,7 +275,7 @@ def test_dashboard_recent_failures_prefers_failed_function_messages(
             "request_id": request_id,
             "plan_id": "plan.rk3576_smoke",
             "updated_at": datetime(
-                2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc
+                2026, 3, 10, 10, 0, 0, tzinfo=UTC
             ).isoformat(),
             "current_status": "failed",
             "fixture": {"name": "rk3576_smoke", "status": "failed"},
@@ -333,7 +332,8 @@ def test_dashboard_recent_failures_prefers_failed_function_messages(
                                     "name": "test_uart_loopback",
                                     "status": "timeout",
                                     "message": (
-                                        "function 'test_uart_loopback' timed out after 5s"
+                                        "function 'test_uart_loopback' timed out "
+                                        "after 5s"
                                     ),
                                 }
                             ],
@@ -374,7 +374,7 @@ def test_dashboard_counts_timeout_cases_as_completed(tmp_path: Path) -> None:
             "request_id": request_id,
             "plan_id": "plan.rk3576_smoke",
             "updated_at": datetime(
-                2026, 3, 10, 10, 0, 0, tzinfo=timezone.utc
+                2026, 3, 10, 10, 0, 0, tzinfo=UTC
             ).isoformat(),
             "current_status": "timeout",
             "fixture": {"name": "rk3576_smoke", "status": "timeout"},

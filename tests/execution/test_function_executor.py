@@ -12,7 +12,6 @@ from framework.domain.execution import (
 from framework.domain.results import ResultStatus
 from framework.execution.function_executor import FunctionExecutor
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

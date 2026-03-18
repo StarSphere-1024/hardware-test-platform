@@ -9,9 +9,9 @@ import json
 import sys
 import threading
 import uuid
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
 
 from framework.config.loader import ConfigLoader
 from framework.config.models import (
@@ -601,7 +601,7 @@ def _run_scheduler(
     dashboard_refresh_interval: float,
     dashboard_start_monitor: bool,
     dashboard_keep_open: bool,
-):
+) -> tuple[Any, dict[str, Any] | None]:
     scheduler = Scheduler(FunctionExecutor(registry))
     if not dashboard_enabled:
         return scheduler.run(plan, context), None

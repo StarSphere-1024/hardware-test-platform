@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from framework.config.models import ResolvedExecutionConfig
@@ -24,7 +24,7 @@ class ReportGenerator:
         resolved_config: ResolvedExecutionConfig,
         events: list[EventRecord],
     ) -> list[ReportArtifact]:
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         sku = resolved_config.board_profile.product.sku or "UNKNOWN"
         suffix = str(root_result.status)
         base_name = f"{sku}_{snapshot.request_id}_{timestamp}_{suffix}".replace(
@@ -35,7 +35,7 @@ class ReportGenerator:
 
         payload = {
             "metadata": {
-                "generated_at": datetime.now(timezone.utc).isoformat(),
+                "generated_at": datetime.now(UTC).isoformat(),
                 "event_count": len(events),
             },
             "request": resolved_config.request,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 
@@ -32,7 +32,7 @@ class ResourceLockManager:
             blocked_reason: str | None = None
             sleep_seconds = 0.01
             now_perf = time.perf_counter()
-            now_utc = datetime.now(timezone.utc)
+            now_utc = datetime.now(UTC)
 
             with self._mutex:
                 for resource in normalized_resources:
@@ -101,7 +101,7 @@ class ResourceLockManager:
         quarantine_seconds: float = 0,
     ) -> dict[str, Any]:
         normalized_resources = self._normalize_resources(resources)
-        released_at = datetime.now(timezone.utc)
+        released_at = datetime.now(UTC)
         quarantine_until = None
         quarantine_until_perf = None
         if quarantine_seconds > 0:

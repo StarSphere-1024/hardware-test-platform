@@ -6,7 +6,6 @@ from framework.config.resolver import ConfigResolver
 from framework.platform.adapters.linux import LinuxAdapter
 from framework.platform.registry import PlatformRegistry
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

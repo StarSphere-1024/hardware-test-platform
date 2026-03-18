@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import glob
 import platform
 import shlex
 import socket
 import subprocess
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
-from collections.abc import Sequence
 
 from .base import CommandResult, PlatformAdapter
 
@@ -71,7 +70,7 @@ class LinuxAdapter(PlatformAdapter):
         return Path(path).read_text(encoding=encoding)
 
     def _list_paths(self, pattern: str) -> list[str]:
-        return sorted(glob.glob(pattern))
+        return sorted(str(p) for p in Path().glob(pattern))
 
     def get_system_info(self) -> dict[str, Any]:
         info = {

@@ -13,7 +13,6 @@ from framework.config.errors import (
 from framework.config.resolver import ConfigResolver
 from framework.config.validator import validate_fixture_data
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 

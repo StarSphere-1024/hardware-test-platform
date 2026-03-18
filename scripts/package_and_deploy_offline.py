@@ -13,7 +13,6 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-
 SOURCE_EXCLUDES = {
     ".git",
     ".venv",

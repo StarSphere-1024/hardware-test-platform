@@ -6,7 +6,6 @@ from collections.abc import Iterable
 
 from framework.domain.results import ExecutionResult, ResultStatus
 
-
 TERMINAL_FAILURE_STATUSES = {
     ResultStatus.FAILED.value,
     ResultStatus.TIMEOUT.value,

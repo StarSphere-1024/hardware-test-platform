@@ -1,0 +1,137 @@
+# Ruff configuration
+# https://docs.astral.sh/ruff/configuration/
+
+# 行宽限制
+line-length = 88
+
+# 目标 Python 版本
+target-version = "py312"
+
+# 排除目录
+extend-exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    "*.pyc",
+]
+
+[lint]
+# 启用的规则类别
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort (导入排序)
+    "N",      # pep8-naming (命名规范)
+    "C90",    # mccabe (圈复杂度)
+    "B",      # flake8-bugbear (常见 bug)
+    "C4",     # flake8-comprehensions (推导式规范)
+    "UP",     # pyupgrade (新语法建议)
+    "RUF",    # Ruff 特有规则
+    "SIM",    # flake8-simplify (代码简化)
+    "RET",    # flake8-return (return 规范)
+    "T20",    # flake8-print (print 语句)
+    "T10",    # flake8-debugger (debugger 语句)
+    "A",      # flake8-builtins (内置名称覆盖)
+    "S",      # flake8-bandit (安全问题)
+    "ANN",    # flake8-annotations (类型注解)
+    "PTH",    # flake8-use-pathlib (pathlib 替代 os.path)
+]
+
+# 忽略的规则
+ignore = [
+    "S101",   # 允许在测试中使用 assert
+    "S105",   # 密码检测 (变量名误报 - TODO: 审查是否有真正的硬编码密码风险)
+    "RET504", # return 前赋值 (有时为了清晰)
+    "UP042",  # StrEnum 建议 (保持兼容性)
+    "PTH123", # open 语句建议 (保持简洁写法)
+]
+
+# 按文件忽略规则
+[lint.per-file-ignores]
+# 测试文件
+"tests/**/*.py" = [
+    "T201",   # 允许 print
+    "N",      # 宽松命名
+    "S",      # 安全规则 (测试数据非生产)
+    "ANN",    # 不强制类型注解
+]
+# 脚本文件
+"scripts/**/*.py" = [
+    "T201",   # 允许 print
+    "S404",   # subprocess 导入
+    "S603",   # subprocess 调用
+]
+# CLI 工具
+"framework/cli/**/*.py" = [
+    "T201",   # 允许 print (用户交互)
+]
+# Dashboard (终端键盘处理需要空 except)
+"framework/dashboard/**/*.py" = [
+    "S110",   # 允许空的 except 块
+]
+# 平台适配器 (subprocess 调用系统命令)
+"framework/platform/**/*.py" = [
+    "S603",   # subprocess 调用
+    "S607",   # 部分路径执行
+]
+# 配置验证器 (复杂验证逻辑需要较高复杂度)
+"framework/config/validator.py" = [
+    "C901",   # validate_* 函数需要复杂验证逻辑
+    "ANN401", # 验证器需要处理任意 JSON 数据
+]
+# 调度器 (并行执行逻辑复杂)
+"framework/execution/scheduler.py" = [
+    "C901",   # _execute_children_parallel 需要管理并发流程
+    "ANN401", # 调度器需要处理通用类型
+]
+# 配置模型 (JSON 数据转换)
+"framework/config/models.py" = [
+    "ANN401", # to_plain_data/from_config 处理任意数据
+]
+# 配置解析器 (模板解析需要通用类型)
+"framework/config/resolver.py" = [
+    "ANN401", # _resolve_templates/_lookup_context 处理模板解析
+]
+# Dashboard (终端渲染需要通用类型)
+"framework/dashboard/cli_dashboard.py" = [
+    "ANN401", # 布局渲染处理通用数据
+]
+# 域模型 (序列化和期望处理)
+"framework/domain/_serialization.py" = [
+    "ANN401", # 通用序列化逻辑
+]
+"framework/execution/function_executor.py" = [
+    "ANN401", # 函数执行和期望处理
+]
+# 函数模块 (execution_context 注入)
+"functions/gpio/test_gpio_mapping.py" = [
+    "ANN401", # execution_context 注入参数
+]
+"functions/i2c/test_i2c_scan.py" = [
+    "ANN401", # execution_context 注入参数
+]
+"functions/network/test_eth_ping.py" = [
+    "ANN401", # execution_context 注入参数
+]
+"functions/rtc/test_rtc_read.py" = [
+    "ANN401", # execution_context 注入参数
+]
+"functions/uart/test_uart_loopback.py" = [
+    "ANN401", # execution_context 注入参数
+]
+
+[lint.isort]
+# 导入排序配置
+known-first-party = ["framework", "functions", "cases", "fixtures", "config"]
+combine-as-imports = true
+
+[lint.mccabe]
+# 最大圈复杂度 (10 for strict financial/low-level projects)
+max-complexity = 10
+
+[format]
+# 代码格式化
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

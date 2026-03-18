@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from collections import defaultdict
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
-from datetime import datetime, timezone
-import threading
+from datetime import UTC, datetime
 from typing import Any
 
 from framework.domain.execution import ExecutionContext, ExecutionPlan, ExecutionTask
@@ -21,7 +21,6 @@ from .policies import (
     summarize_children,
 )
 from .resource_locks import ResourceLockManager
-
 
 DEFAULT_RESOURCE_QUARANTINE_SECONDS = 5.0
 
@@ -92,10 +91,10 @@ class Scheduler:
 
         if task.execution_mode not in {"sequential", "parallel"}:
             raise UnsupportedExecutionModeError(
-                (
+
                     f"unsupported task execution mode: {task.task_id} "
                     f"-> {task.execution_mode}"
-                )
+
             )
 
         observer = self._observer_from_context(context)
@@ -109,7 +108,7 @@ class Scheduler:
             len(children_by_parent.get(task.task_id, [])),
         )
 
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
         started_perf = time.perf_counter()
 
         if task.task_type == "case":
@@ -132,7 +131,7 @@ class Scheduler:
                 task, child_tasks, children_by_parent, context, plan_id
             )
 
-        finished_at = datetime.now(timezone.utc)
+        finished_at = datetime.now(UTC)
         status = aggregate_status(child_results)
         summary = summarize_children(child_results)
         message = self._build_container_message(task.task_type, summary)
@@ -430,8 +429,8 @@ class Scheduler:
         if not missing:
             return None
 
-        started_at = datetime.now(timezone.utc)
-        finished_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
+        finished_at = datetime.now(UTC)
         return ExecutionResult(
             task_id=task.task_id,
             task_type=task.task_type,
@@ -449,7 +448,7 @@ class Scheduler:
     def _build_aborted_result(
         self, task: ExecutionTask, message: str
     ) -> ExecutionResult:
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         return ExecutionResult(
             task_id=task.task_id,
             task_type=task.task_type,
@@ -467,10 +466,10 @@ class Scheduler:
         ordered = ", ".join(f"{key}={value}" for key, value in sorted(summary.items()))
         return f"{task_type} completed: {ordered}"
 
-    def _observer_from_context(self, context: ExecutionContext):
+    def _observer_from_context(self, context: ExecutionContext) -> Any:
         return context.runtime_state.get("observability")
 
-    def _logger_from_context(self, context: ExecutionContext):
+    def _logger_from_context(self, context: ExecutionContext) -> Any:
         observer = context.runtime_state.get("observability")
         if observer is not None and hasattr(observer, "logger"):
             return observer.logger
@@ -543,7 +542,7 @@ class Scheduler:
     def _build_resource_lock_failure(
         self, task: ExecutionTask, lock_info: dict[str, Any]
     ) -> ExecutionResult:
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
         reason = str(lock_info.get("reason") or "timeout")
         blocked_resource = lock_info.get("blocked_resource")
         if reason == "quarantine":

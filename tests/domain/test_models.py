@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from framework.config.resolver import ConfigResolver
@@ -21,7 +21,6 @@ from framework.domain.results import (
     ResultSnapshot,
     ResultStatus,
 )
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -96,8 +95,8 @@ def test_execution_context_serializes_with_resolved_config() -> None:
 
 
 def test_execution_result_snapshot_and_dashboard_are_serializable() -> None:
-    started_at = datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc)
-    finished_at = datetime(2026, 3, 6, 12, 0, 1, tzinfo=timezone.utc)
+    started_at = datetime(2026, 3, 6, 12, 0, 0, tzinfo=UTC)
+    finished_at = datetime(2026, 3, 6, 12, 0, 1, tzinfo=UTC)
     child = ExecutionResult(
         task_id="function.eth.1",
         task_type="function",
@@ -161,7 +160,7 @@ def test_execution_result_snapshot_and_dashboard_are_serializable() -> None:
 
 
 def test_execution_event_record_is_json_serializable() -> None:
-    timestamp = datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc)
+    timestamp = datetime(2026, 3, 6, 12, 0, 0, tzinfo=UTC)
     event = ExecutionEvent(
         event_id="evt-001",
         request_id="req-001",

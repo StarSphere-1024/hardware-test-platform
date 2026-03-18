@@ -6,12 +6,11 @@ import inspect
 import logging
 import threading
 import time
-from datetime import datetime, timezone
+from collections.abc import Callable
+from concurrent.futures import TimeoutError as FutureTimeoutError
+from datetime import UTC, datetime
 from queue import Queue
 from typing import Any
-from collections.abc import Callable
-
-from concurrent.futures import TimeoutError as FutureTimeoutError
 
 from framework.domain.execution import ExecutionContext, ExecutionTask
 from framework.domain.results import ExecutionResult, ResultStatus
@@ -56,7 +55,7 @@ class FunctionExecutor:
             params,
         )
 
-        started_at = datetime.now(timezone.utc)
+        started_at = datetime.now(UTC)
         started_perf = time.perf_counter()
         callable_obj = self.function_registry[function_name]
 
@@ -81,7 +80,7 @@ class FunctionExecutor:
                 function_name,
                 task.timeout,
             )
-            finished_at = datetime.now(timezone.utc)
+            finished_at = datetime.now(UTC)
             return ExecutionResult(
                 task_id=task.task_id,
                 task_type=task.task_type,
@@ -113,7 +112,7 @@ class FunctionExecutor:
                 function_name,
                 error,
             )
-            finished_at = datetime.now(timezone.utc)
+            finished_at = datetime.now(UTC)
             return ExecutionResult(
                 task_id=task.task_id,
                 task_type=task.task_type,
@@ -132,7 +131,7 @@ class FunctionExecutor:
             function_name,
             status,
         )
-        finished_at = datetime.now(timezone.utc)
+        finished_at = datetime.now(UTC)
         return ExecutionResult(
             task_id=task.task_id,
             task_type=task.task_type,
@@ -384,31 +383,51 @@ class FunctionExecutor:
             return metrics[field_path]
         return None
 
-    def _evaluate_expectation(self, operator: str, actual: Any, expected: Any) -> bool:
-        if operator == "eq":
-            return actual == expected
-        if operator == "ne":
-            return actual != expected
-        if operator == "gt":
-            return actual is not None and expected is not None and actual > expected
-        if operator == "gte":
-            return actual is not None and expected is not None and actual >= expected
-        if operator == "lt":
-            return actual is not None and expected is not None and actual < expected
-        if operator == "lte":
-            return actual is not None and expected is not None and actual <= expected
-        if operator == "contains":
-            try:
-                return expected in actual
-            except TypeError:
-                return False
-        if operator == "in":
-            try:
-                return actual in expected
-            except TypeError:
-                return False
-        if operator == "exists":
-            return actual is not None
-        if operator == "non_empty":
-            return actual not in (None, "", [], {}, ())
-        raise TaskExecutionError(f"unsupported expect operator: {operator}")
+    def _evaluate_expectation(  # noqa: C901
+        self, operator: str, actual: Any, expected: Any
+    ) -> bool:
+        match operator:
+            case "eq":
+                return actual == expected
+            case "ne":
+                return actual != expected
+            case "gt":
+                return (
+                    actual is not None
+                    and expected is not None
+                    and actual > expected
+                )
+            case "gte":
+                return (
+                    actual is not None
+                    and expected is not None
+                    and actual >= expected
+                )
+            case "lt":
+                return (
+                    actual is not None
+                    and expected is not None
+                    and actual < expected
+                )
+            case "lte":
+                return (
+                    actual is not None
+                    and expected is not None
+                    and actual <= expected
+                )
+            case "contains":
+                try:
+                    return expected in actual
+                except TypeError:
+                    return False
+            case "in":
+                try:
+                    return actual in expected
+                except TypeError:
+                    return False
+            case "exists":
+                return actual is not None
+            case "non_empty":
+                return actual not in (None, "", [], {}, ())
+            case _:
+                raise TaskExecutionError(f"unsupported expect operator: {operator}")

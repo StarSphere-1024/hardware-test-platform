@@ -23,7 +23,7 @@ class _TerminalInput:
         self.fd: int | None = None
         self._old_attr = None
 
-    def __enter__(self):
+    def __enter__(self) -> _TerminalInput:
         try:
             import sys
             import termios
@@ -43,7 +43,12 @@ class _TerminalInput:
             self.enabled = False
         return self
 
-    def __exit__(self, exc_type, exc, tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: Any,
+    ) -> None:
         try:
             import termios
 

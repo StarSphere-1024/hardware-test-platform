@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC
+
 from framework.domain.results import ExecutionResult, ResultStatus
 from framework.execution.policies import (
     aggregate_status,
@@ -69,45 +71,45 @@ class TestExecutionResultWithRunningStatus:
 
     def test_execution_result_accepts_running_status_enum(self) -> None:
         """Verify ExecutionResult can be created with ResultStatus.RUNNING."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         result = ExecutionResult(
             task_id="test-001",
             task_type="function",
             name="test_function",
             status=ResultStatus.RUNNING,
-            started_at=datetime.now(timezone.utc),
-            finished_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
             duration_ms=100,
         )
         assert result.status == ResultStatus.RUNNING
 
     def test_execution_result_accepts_running_status_string(self) -> None:
         """Verify ExecutionResult can be created with 'running' string."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         result = ExecutionResult(
             task_id="test-001",
             task_type="function",
             name="test_function",
             status="running",
-            started_at=datetime.now(timezone.utc),
-            finished_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
             duration_ms=100,
         )
         assert result.status == "running"
 
     def test_execution_result_status_serialization(self) -> None:
         """Verify ExecutionResult status serializes correctly to dict."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         result = ExecutionResult(
             task_id="test-001",
             task_type="function",
             name="test_function",
             status=ResultStatus.RUNNING,
-            started_at=datetime.now(timezone.utc),
-            finished_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
             duration_ms=100,
         )
         payload = result.to_dict()
@@ -193,9 +195,9 @@ class TestStatusAggregation:
 
     def test_aggregate_status_all_passed(self) -> None:
         """Verify all passed children returns PASSED."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         children = [
             ExecutionResult(
                 task_id=f"child-{i}",
@@ -212,9 +214,9 @@ class TestStatusAggregation:
 
     def test_aggregate_status_with_running_returns_running(self) -> None:
         """Verify running children affects aggregation appropriately."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         children = [
             ExecutionResult(
                 task_id="child-1",
@@ -244,9 +246,9 @@ class TestStatusAggregation:
 
     def test_aggregate_status_with_failed(self) -> None:
         """Verify failed child returns FAILED."""
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         children = [
             ExecutionResult(
                 task_id="child-1",

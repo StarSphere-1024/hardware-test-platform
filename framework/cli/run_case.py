@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import argparse
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
 
 from framework.config.errors import ConfigError, SchemaValidationError
 from framework.execution.fixture_runner import FixtureRunner
@@ -22,7 +23,7 @@ from .common import (
 )
 
 
-def _build_fixture_misuse_hint(args) -> str | None:
+def _build_fixture_misuse_hint(args: argparse.Namespace) -> str | None:
     """Return a friendly hint when a fixture config is passed to run_case."""
 
     config_path = Path(args.config)

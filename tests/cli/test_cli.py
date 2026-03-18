@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import threading
 import time
+from datetime import UTC
+from pathlib import Path
 
 import pytest
 
@@ -11,7 +12,6 @@ import framework.cli.common as cli_common
 from framework.cli.run_case import main as run_case_main
 from framework.cli.run_fixture import main as run_fixture_main
 from framework.cli.run_function import main as run_function_main
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -265,7 +265,7 @@ def test_run_function_cli_auto_detects_workspace_root_from_subdir(
 def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from framework.platform.capabilities import (
         GPIOCapability,
@@ -309,7 +309,7 @@ def test_run_fixture_cli_auto_discovers_real_eth_and_uart_functions(
         return {
             "success": True,
             "device": device or "/dev/rtc0",
-            "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+            "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=UTC),
             "time_iso": "2026-03-06T12:00:00+00:00",
             "source": "hwclock",
             "raw": "2026-03-06 12:00:00",
@@ -455,7 +455,7 @@ def test_run_case_cli_auto_discovers_real_eth_function(
 def test_run_case_cli_auto_discovers_real_rtc_function(
     tmp_path: Path, monkeypatch, capsys
 ) -> None:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     from framework.platform.capabilities import RTCCapability
 
@@ -463,7 +463,7 @@ def test_run_case_cli_auto_discovers_real_rtc_function(
         return {
             "success": True,
             "device": device or "/dev/rtc0",
-            "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+            "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=UTC),
             "time_iso": "2026-03-06T12:00:00+00:00",
             "source": "hwclock",
             "raw": "2026-03-06 12:00:00",

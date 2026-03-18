@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
-
-from datetime import datetime, timezone
 
 from ..base import RTCCapabilityContract
 
@@ -63,7 +62,7 @@ class LinuxRTCCapability(RTCCapabilityContract):
             if self.adapter._path_exists(candidate):
                 raw = self.adapter._read_text(candidate).strip().split(".")[0]
                 epoch = int(raw)
-                parsed = datetime.fromtimestamp(epoch, tz=timezone.utc)
+                parsed = datetime.fromtimestamp(epoch, tz=UTC)
                 return {
                     "success": True,
                     "device": rtc_device,
@@ -103,7 +102,7 @@ class LinuxRTCCapability(RTCCapabilityContract):
             try:
                 parsed = datetime.strptime(head, pattern)
                 return (
-                    parsed.replace(tzinfo=timezone.utc)
+                    parsed.replace(tzinfo=UTC)
                     if parsed.tzinfo is None
                     else parsed
                 )

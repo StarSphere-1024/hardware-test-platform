@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from framework.cli.run_fixture import main as run_fixture_main
-
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -67,7 +66,7 @@ def _patch_quick_validation_capabilities(
         return {
             "success": True,
             "device": device or "/dev/rtc0",
-            "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=timezone.utc),
+            "datetime": datetime(2026, 3, 6, 12, 0, 0, tzinfo=UTC),
             "time_iso": "2026-03-06T12:00:00+00:00",
             "source": "hwclock",
             "raw": "2026-03-06 12:00:00",

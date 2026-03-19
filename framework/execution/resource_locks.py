@@ -9,7 +9,14 @@ from typing import Any
 
 
 class ResourceLockManager:
+    """Resource lock manager for coordinating concurrent resource access."""
+
     def __init__(self, state: dict[str, Any] | None = None) -> None:
+        """Initialize ResourceLockManager.
+
+        Args:
+            state: Shared state dictionary for persisting lock information.
+        """
         self._state = state if state is not None else {}
         self._mutex = threading.Lock()
 
@@ -21,6 +28,17 @@ class ResourceLockManager:
         owner_attempt: int,
         timeout_seconds: int | None,
     ) -> dict[str, Any]:
+        """Acquire resource locks.
+
+        Args:
+            resources: List of resource names.
+            owner_task_id: Owner task ID.
+            owner_attempt: Owner attempt count.
+            timeout_seconds: Timeout in seconds.
+
+        Returns:
+            Dictionary containing acquisition result.
+        """
         normalized_resources = self._normalize_resources(resources)
         started_perf = time.perf_counter()
         deadline = (
@@ -100,6 +118,17 @@ class ResourceLockManager:
         release_reason: str,
         quarantine_seconds: float = 0,
     ) -> dict[str, Any]:
+        """Release resource locks.
+
+        Args:
+            resources: List of resource names.
+            owner_task_id: Owner task ID.
+            release_reason: Release reason.
+            quarantine_seconds: Quarantine duration in seconds.
+
+        Returns:
+            Dictionary containing release result.
+        """
         normalized_resources = self._normalize_resources(resources)
         released_at = datetime.now(UTC)
         quarantine_until = None

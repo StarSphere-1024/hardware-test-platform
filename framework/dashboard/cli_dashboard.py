@@ -83,6 +83,8 @@ class _TerminalInput:
 
 
 class DashboardDataSource:
+    """Dashboard data source."""
+
     def __init__(
         self,
         *,
@@ -91,12 +93,28 @@ class DashboardDataSource:
         logs_dir: str | Path,
         reports_dir: str | Path,
     ) -> None:
+        """Initialize dashboard data source.
+
+        Args:
+            workspace_root: Workspace root directory.
+            tmp_dir: Temporary directory path.
+            logs_dir: Log directory path.
+            reports_dir: Reports directory path.
+        """
         self.workspace_root = Path(workspace_root).resolve()
         self.tmp_dir = Path(tmp_dir).resolve()
         self.logs_dir = Path(logs_dir).resolve()
         self.reports_dir = Path(reports_dir).resolve()
 
     def read_snapshot(self, request_id: str | None = None) -> dict[str, Any]:
+        """Read execution snapshot data.
+
+        Args:
+            request_id: Request ID, returns latest snapshot if None.
+
+        Returns:
+            Snapshot data dictionary.
+        """
         path = self._select_snapshot_path(request_id)
         if path is None:
             return {}
@@ -106,6 +124,14 @@ class DashboardDataSource:
             return {}
 
     def read_events(self, request_id: str | None) -> list[dict[str, Any]]:
+        """Read execution events list.
+
+        Args:
+            request_id: Request ID.
+
+        Returns:
+            List of event data.
+        """
         if not request_id:
             return []
         path = self.logs_dir / "events" / f"{request_id}.jsonl"
@@ -121,6 +147,11 @@ class DashboardDataSource:
         return items
 
     def read_system_info(self) -> dict[str, Any]:
+        """Read system monitoring information.
+
+        Returns:
+            System information dictionary.
+        """
         path = self.tmp_dir / "system_monitor.json"
         if not path.exists():
             return {
@@ -139,6 +170,14 @@ class DashboardDataSource:
             return {}
 
     def load_fixture_config(self, fixture_name: str) -> dict[str, Any]:
+        """Load fixture configuration.
+
+        Args:
+            fixture_name: Fixture name.
+
+        Returns:
+            Fixture configuration dictionary.
+        """
         if not fixture_name:
             return {}
         fixtures_dir = self.workspace_root / "fixtures"
@@ -157,6 +196,15 @@ class DashboardDataSource:
         return {}
 
     def read_log_lines(self, request_id: str | None, *, limit: int = 20) -> list[str]:
+        """Read log file contents.
+
+        Args:
+            request_id: Request ID.
+            limit: Maximum number of lines to return.
+
+        Returns:
+            List of log lines.
+        """
         path = self._select_log_path(request_id)
         if path is None:
             return ["No log files available"]
@@ -167,6 +215,14 @@ class DashboardDataSource:
         return [f"File: {path.name}", *lines[-limit:]]
 
     def has_report(self, request_id: str | None) -> bool:
+        """Check if report files exist.
+
+        Args:
+            request_id: Request ID.
+
+        Returns:
+            Whether report exists.
+        """
         if not self.reports_dir.exists():
             return False
         if request_id:
@@ -197,6 +253,8 @@ class DashboardDataSource:
 
 
 class CLIDashboard:
+    """Terminal dashboard."""
+
     def __init__(
         self,
         *,
@@ -211,6 +269,20 @@ class CLIDashboard:
         success_exit_linger_seconds: float | None = 3.0,
         failure_exit_linger_seconds: float | None = None,
     ) -> None:
+        """Initialize terminal dashboard.
+
+        Args:
+            workspace_root: Workspace root directory.
+            tmp_dir: Temporary directory path.
+            logs_dir: Log directory path.
+            reports_dir: Reports directory path.
+            refresh_interval: Refresh interval in seconds.
+            fixture_name: Fixture name.
+            request_id: Request ID.
+            auto_exit: Whether to exit automatically.
+            success_exit_linger_seconds: Linger time after success in seconds.
+            failure_exit_linger_seconds: Linger time after failure in seconds.
+        """
         self.workspace_root = Path(workspace_root).resolve()
         self.tmp_dir = Path(tmp_dir).resolve()
         self.logs_dir = Path(logs_dir).resolve()
@@ -240,6 +312,11 @@ class CLIDashboard:
         self._running_case_timers: dict[str, tuple[float, float]] = {}
 
     def start(self, *, start_monitor: bool = True) -> None:
+        """Start dashboard display.
+
+        Args:
+            start_monitor: Whether to start system monitoring.
+        """
         self._running = True
         self._start_monotonic = time.monotonic()
         if start_monitor:
@@ -247,10 +324,16 @@ class CLIDashboard:
         self._run_live_display()
 
     def stop(self) -> None:
+        """Stop dashboard."""
         self._running = False
         self._stop_monitor()
 
     def render_once(self) -> Layout:
+        """Render dashboard layout once.
+
+        Returns:
+            Rich Layout object.
+        """
         return self._generate_layout()
 
     def _start_monitor(self) -> None:
@@ -766,6 +849,19 @@ def run_dashboard(
     success_exit_linger_seconds: float | None = 3.0,
     failure_exit_linger_seconds: float | None = None,
 ) -> None:
+    """Run terminal dashboard.
+
+    Args:
+        workspace_root: Workspace root directory.
+        artifacts_root: Output directory root path.
+        fixture_name: Fixture name.
+        request_id: Request ID.
+        refresh_interval: Refresh interval in seconds.
+        start_monitor: Whether to start system monitoring.
+        auto_exit: Whether to exit automatically.
+        success_exit_linger_seconds: Linger time after success in seconds.
+        failure_exit_linger_seconds: Linger time after failure in seconds.
+    """
     outputs_root = Path(artifacts_root).resolve()
     dashboard = CLIDashboard(
         workspace_root=workspace_root,

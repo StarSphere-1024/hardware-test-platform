@@ -25,7 +25,6 @@ from .common import (
 
 def _build_fixture_misuse_hint(args: argparse.Namespace) -> str | None:
     """Return a friendly hint when a fixture config is passed to run_case."""
-
     config_path = Path(args.config)
     if "fixtures" in config_path.parts:
         return (
@@ -58,6 +57,15 @@ def main(
     *,
     function_registry: dict[str, Callable[..., Any]] | None = None,
 ) -> int:
+    """Main entry function for case test execution.
+
+    Args:
+        argv: CLI argument list.
+        function_registry: Optional function registry.
+
+    Returns:
+        Exit code, 0 for success.
+    """
     parser = create_base_parser("Execute a case configuration")
     parser.add_argument("--config", required=True, help="case config path")
     args = parser.parse_args(argv)

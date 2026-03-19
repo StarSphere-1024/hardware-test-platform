@@ -9,7 +9,17 @@ from ..base import RTCCapabilityContract
 
 
 class LinuxRTCCapability(RTCCapabilityContract):
+    """Linux RTC capability implementation.
+
+    Supports device enumeration and time reading.
+    """
+
     def list_devices(self) -> list[str]:
+        """List RTC devices in the system.
+
+        Returns:
+            Sorted list of RTC device paths.
+        """
         devices = self.adapter._list_paths("/dev/rtc*")
         return sorted(
             [path for path in devices if path != "/dev/rtc"]
@@ -17,9 +27,25 @@ class LinuxRTCCapability(RTCCapabilityContract):
         )
 
     def device_exists(self, device: str) -> bool:
+        """Check if RTC device exists.
+
+        Args:
+            device: RTC device path.
+
+        Returns:
+            True if device exists, False otherwise.
+        """
         return self.adapter._path_exists(device)
 
     def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
+        """Resolve bound RTC interface.
+
+        Args:
+            declared: List of declared interfaces, optional.
+
+        Returns:
+            Bound interface path, or None if not found.
+        """
         preferred = declared or self._declared_interfaces("rtc")
         for candidate in preferred:
             if self.adapter._path_exists(candidate):
@@ -27,6 +53,14 @@ class LinuxRTCCapability(RTCCapabilityContract):
         return None
 
     def read_time(self, device: str | None = None) -> dict[str, Any]:
+        """Read RTC device time.
+
+        Args:
+            device: RTC device path, optional.
+
+        Returns:
+            Dictionary containing time information including ISO format timestamp.
+        """
         rtc_device = device or self.resolve_bound_interface()
         if not rtc_device:
             return {
@@ -83,6 +117,14 @@ class LinuxRTCCapability(RTCCapabilityContract):
         }
 
     def _declared_interfaces(self, name: str) -> list[str]:
+        """Get declared interfaces from board profile.
+
+        Args:
+            name: Interface name.
+
+        Returns:
+            List of declared interface paths.
+        """
         value = self.board_profile.get("interfaces", {}).get(name, [])
         if isinstance(value, list):
             return [item for item in value if isinstance(item, str)]
@@ -96,6 +138,14 @@ class LinuxRTCCapability(RTCCapabilityContract):
         return []
 
     def _parse_hwclock_output(self, output: str) -> datetime | None:
+        """Parse hwclock output to datetime object.
+
+        Args:
+            output: hwclock command output.
+
+        Returns:
+            Parsed datetime object, or None if parsing fails.
+        """
         first_line = output.strip().splitlines()[0] if output.strip() else ""
         head = first_line.split(".")[0].strip()
         for pattern in ("%Y-%m-%d %H:%M:%S", "%a %d %b %Y %I:%M:%S %p %Z"):

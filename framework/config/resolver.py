@@ -40,7 +40,14 @@ _TEMPLATE_PATTERN = re.compile(r"\$\{([^{}]+)\}")
 
 
 class ConfigResolver:
+    """Configuration resolver."""
+
     def __init__(self, workspace_root: str | Path) -> None:
+        """Initialize configuration resolver.
+
+        Args:
+            workspace_root: Workspace root directory.
+        """
         self.workspace_root = Path(workspace_root).resolve()
         self.loader = ConfigLoader(self.workspace_root)
 
@@ -53,6 +60,18 @@ class ConfigResolver:
         cli_overrides: dict[str, Any] | None = None,
         request: dict[str, Any] | None = None,
     ) -> ResolvedExecutionConfig:
+        """Resolve fixture configuration.
+
+        Args:
+            fixture_path: Fixture configuration file path.
+            global_config_path: Global configuration file path.
+            board_profile: Board profile name.
+            cli_overrides: CLI override settings.
+            request: Execution request data.
+
+        Returns:
+            ResolvedExecutionConfig object.
+        """
         overrides = self._validate_overrides(cli_overrides)
         global_config, global_source = self.loader.load_global_config(
             global_config_path
@@ -122,6 +141,18 @@ class ConfigResolver:
         cli_overrides: dict[str, Any] | None = None,
         request: dict[str, Any] | None = None,
     ) -> ResolvedExecutionConfig:
+        """Resolve case configuration.
+
+        Args:
+            case_path: Case configuration file path.
+            global_config_path: Global configuration file path.
+            board_profile: Board profile name.
+            cli_overrides: CLI override settings.
+            request: Execution request data.
+
+        Returns:
+            ResolvedExecutionConfig object.
+        """
         overrides = self._validate_overrides(cli_overrides)
         global_config, global_source = self.loader.load_global_config(
             global_config_path

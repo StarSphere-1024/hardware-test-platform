@@ -26,12 +26,31 @@ DEFAULT_RESOURCE_QUARANTINE_SECONDS = 5.0
 
 
 class Scheduler:
+    """Sequential scheduler for executing task graphs."""
+
     def __init__(self, function_executor: FunctionExecutor) -> None:
+        """Initialize Scheduler.
+
+        Args:
+            function_executor: Function executor.
+        """
         self.function_executor = function_executor
         self._resource_lock_managers: dict[int, ResourceLockManager] = {}
         self._runtime_state_lock = threading.Lock()
 
     def run(self, plan: ExecutionPlan, context: ExecutionContext) -> ExecutionResult:
+        """Execute an execution plan.
+
+        Args:
+            plan: Execution plan.
+            context: Execution context.
+
+        Returns:
+            Execution result.
+
+        Raises:
+            UnsupportedExecutionModeError: When execution mode is unsupported.
+        """
         if plan.root_task.execution_mode not in {"sequential", "parallel"}:
             raise UnsupportedExecutionModeError(
                 f"unsupported root execution mode: {plan.root_task.execution_mode}"
@@ -79,6 +98,20 @@ class Scheduler:
         context: ExecutionContext,
         plan_id: str,
     ) -> ExecutionResult:
+        """Execute a task and its children.
+
+        Args:
+            task: Task to execute.
+            children_by_parent: Mapping of parent task IDs to child tasks.
+            context: Execution context.
+            plan_id: Plan identifier.
+
+        Returns:
+            Execution result.
+
+        Raises:
+            UnsupportedExecutionModeError: When task execution mode is unsupported.
+        """
         logger = self._logger_from_context(context)
 
         if task.task_type == "function":
@@ -91,10 +124,8 @@ class Scheduler:
 
         if task.execution_mode not in {"sequential", "parallel"}:
             raise UnsupportedExecutionModeError(
-
-                    f"unsupported task execution mode: {task.task_id} "
-                    f"-> {task.execution_mode}"
-
+                f"unsupported task execution mode: {task.task_id} "
+                f"-> {task.execution_mode}"
             )
 
         observer = self._observer_from_context(context)
@@ -574,7 +605,7 @@ class Scheduler:
         result.details["resource_lock"] = {
             "resources": list(lock_info.get("resources", [])),
             "wait_ms": int(lock_info.get("wait_ms", 0) or 0),
-            "acquired": bool(lock_info.get("acquired", False)),
+            "acquired": bool(lock_info.get("acquired")),
             "blocked_resource": lock_info.get("blocked_resource"),
             "blocked_reason": lock_info.get("reason"),
             "release_reason": release_info.get("release_reason")

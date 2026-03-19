@@ -12,6 +12,8 @@ _TARGET_TYPES = {"function", "case", "fixture"}
 
 @dataclass(slots=True)
 class ExecutionRequest(SerializableModel):
+    """Execution request model."""
+
     request_id: str
     target_type: str
     target_name: str
@@ -22,6 +24,11 @@ class ExecutionRequest(SerializableModel):
     trigger_source: str | None = None
 
     def __post_init__(self) -> None:
+        """Validate execution request data.
+
+        Raises:
+            ValueError: When data is invalid.
+        """
         if not self.request_id:
             raise ValueError("request_id must not be empty")
         if self.target_type not in _TARGET_TYPES:

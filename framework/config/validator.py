@@ -120,6 +120,12 @@ def _validate_execution(
 
 
 def validate_global_config_data(data: Any, *, source: str | None = None) -> None:
+    """Validate global configuration data.
+
+    Args:
+        data: Configuration data dictionary.
+        source: Configuration source identifier.
+    """
     root = _ensure_mapping(data, field_path="global_config", source=source)
     product = _ensure_mapping(
         _require_field(root, "product", field_path="product", source=source),
@@ -196,6 +202,15 @@ def validate_global_config_data(data: Any, *, source: str | None = None) -> None
 
 
 def validate_board_profile_data(data: Any, *, source: str | None = None) -> None:
+    """Validate board profile data.
+
+    Args:
+        data: Configuration data dictionary.
+        source: Configuration source identifier.
+
+    Raises:
+        SchemaValidationError: When data format is invalid.
+    """
     root = _ensure_mapping(data, field_path="board_profile", source=source)
     _require_string(root, "profile_name", field_path="profile_name", source=source)
     _require_string(root, "platform", field_path="platform", source=source)
@@ -264,6 +279,15 @@ def validate_board_profile_data(data: Any, *, source: str | None = None) -> None
 
 
 def validate_case_data(data: Any, *, source: str | None = None) -> None:
+    """Validate case data.
+
+    Args:
+        data: Configuration data dictionary.
+        source: Configuration source identifier.
+
+    Raises:
+        SchemaValidationError: When data format is invalid.
+    """
     root = _ensure_mapping(data, field_path="case", source=source)
     _require_string(root, "case_name", field_path="case_name", source=source)
     _require_string(root, "module", field_path="module", source=source)
@@ -338,6 +362,15 @@ def validate_case_data(data: Any, *, source: str | None = None) -> None:
 
 
 def validate_fixture_data(data: Any, *, source: str | None = None) -> None:
+    """Validate fixture data.
+
+    Args:
+        data: Configuration data dictionary.
+        source: Configuration source identifier.
+
+    Raises:
+        SchemaValidationError: When data format is invalid.
+    """
     root = _ensure_mapping(data, field_path="fixture", source=source)
     _require_string(root, "fixture_name", field_path="fixture_name", source=source)
     _optional_string(root, "board_profile", field_path="board_profile", source=source)

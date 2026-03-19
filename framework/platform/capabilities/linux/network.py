@@ -9,7 +9,20 @@ from ..base import NetworkCapabilityContract
 
 
 class LinuxNetworkCapability(NetworkCapabilityContract):
+    """Linux network capability implementation.
+
+    Supports interface enumeration and ICMP ping tests.
+    """
+
     def list_interfaces(self, *, include_loopback: bool = False) -> list[str]:
+        """List network interfaces in the system.
+
+        Args:
+            include_loopback: Whether to include loopback interface, defaults to False.
+
+        Returns:
+            List of network interface names.
+        """
         interfaces = [
             path.rsplit("/", 1)[-1]
             for path in self.adapter._list_paths("/sys/class/net/*")
@@ -19,6 +32,14 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
         return [name for name in interfaces if name != "lo"]
 
     def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
+        """Resolve bound network interface.
+
+        Args:
+            declared: List of declared interfaces, optional.
+
+        Returns:
+            Bound interface name, or None if not found.
+        """
         preferred = declared or self._declared_interfaces("eth")
         available = set(self.list_interfaces(include_loopback=True))
         for candidate in preferred:
@@ -34,6 +55,17 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
         count: int = 1,
         timeout: int = 5,
     ) -> dict[str, Any]:
+        """Execute ICMP ping test.
+
+        Args:
+            target_ip: Target IP address.
+            interface: Network interface to use, optional.
+            count: Number of ping packets, defaults to 1.
+            timeout: Timeout in seconds, defaults to 5.
+
+        Returns:
+            Dictionary containing ping test results including packet loss and latency.
+        """
         command = ["ping", "-c", str(count), "-W", str(timeout)]
         if interface:
             command.extend(["-I", interface])
@@ -64,6 +96,14 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
         }
 
     def _declared_interfaces(self, name: str) -> list[str]:
+        """Get declared interfaces from board profile.
+
+        Args:
+            name: Interface name.
+
+        Returns:
+            List of declared interface paths.
+        """
         value = self.board_profile.get("interfaces", {}).get(name, [])
         if isinstance(value, list):
             return [item for item in value if isinstance(item, str)]
@@ -77,12 +117,28 @@ class LinuxNetworkCapability(NetworkCapabilityContract):
         return []
 
     def _parse_packet_loss(self, output: str) -> float:
+        """Parse packet loss from ping output.
+
+        Args:
+            output: Ping command output.
+
+        Returns:
+            Packet loss percentage.
+        """
         match = re.search(r"([\d.]+)%\s+packet loss", output)
         if match:
             return float(match.group(1))
         return 100.0 if output else 0.0
 
     def _parse_average_latency(self, output: str) -> float:
+        """Parse average latency from ping output.
+
+        Args:
+            output: Ping command output.
+
+        Returns:
+            Average latency in milliseconds.
+        """
         match = re.search(
             r"(?:rtt|round-trip) min/avg/max(?:/mdev)? = [\d.]+/([\d.]+)/", output
         )

@@ -16,12 +16,25 @@ except ImportError:  # pragma: no cover - runtime fallback only
 
 
 class SystemMonitor:
+    """Background system monitor for collecting and storing system metrics data.
+
+    Periodically collects CPU, memory, storage, and platform information,
+    and writes the data to a JSON file.
+    """
+
     def __init__(
         self,
         output_dir: str = "tmp",
         output_file: str = "system_monitor.json",
         refresh_interval: float = 2.0,
     ) -> None:
+        """Initialize system monitor.
+
+        Args:
+            output_dir: Output directory.
+            output_file: Output filename.
+            refresh_interval: Data collection refresh interval in seconds.
+        """
         self.output_dir = Path(output_dir)
         self.output_file = self.output_dir / output_file
         self.refresh_interval = refresh_interval
@@ -33,6 +46,10 @@ class SystemMonitor:
         self._last_data: dict[str, Any] = {}
 
     def start(self) -> None:
+        """Start background monitoring thread.
+
+        Does nothing if monitoring is already running.
+        """
         if self._running:
             return
         self._running = True
@@ -41,6 +58,10 @@ class SystemMonitor:
         self._thread.start()
 
     def stop(self) -> None:
+        """Stop background monitoring thread.
+
+        Waits up to 1 second for the thread to exit.
+        """
         self._running = False
         self._stop_event.set()
         if self._thread is not None:
@@ -48,6 +69,11 @@ class SystemMonitor:
             self._thread = None
 
     def collect(self) -> dict[str, Any]:
+        """Collect current system metrics.
+
+        Returns:
+            Dictionary containing CPU, memory, storage, and platform information.
+        """
         data = {
             "timestamp": time.time(),
             "cpu": self._get_cpu_info(),
@@ -60,10 +86,19 @@ class SystemMonitor:
         return data
 
     def get_latest(self) -> dict[str, Any]:
+        """Get latest collected system data.
+
+        Returns:
+            Copy of the latest system data dictionary.
+        """
         with self._lock:
             return self._last_data.copy()
 
     def _run_loop(self) -> None:
+        """Background monitoring loop.
+
+        Periodically collects data and writes to file until stop signal is received.
+        """
         while self._running:
             with contextlib.suppress(Exception):
                 self._write(self.collect())
@@ -71,11 +106,21 @@ class SystemMonitor:
                 break
 
     def _write(self, data: dict[str, Any]) -> None:
+        """Write data to JSON file.
+
+        Args:
+            data: System data dictionary to write.
+        """
         self.output_file.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
     def _get_cpu_info(self) -> dict[str, Any]:
+        """Get CPU information.
+
+        Returns:
+            Dictionary containing CPU usage, frequency, temperature, and core count.
+        """
         if psutil is None:
             return {
                 "usage_percent": None,
@@ -95,6 +140,11 @@ class SystemMonitor:
         }
 
     def _get_cpu_temperature(self) -> float | None:
+        """Get CPU temperature.
+
+        Returns:
+            CPU temperature in Celsius, or None if unavailable.
+        """
         if psutil is None:
             return None
         try:
@@ -116,6 +166,11 @@ class SystemMonitor:
         return None
 
     def _get_memory_info(self) -> dict[str, Any]:
+        """Get memory information.
+
+        Returns:
+            Dictionary containing used, available, total memory (MB) and usage percent.
+        """
         if psutil is None:
             return {
                 "used_mb": None,
@@ -132,6 +187,11 @@ class SystemMonitor:
         }
 
     def _get_storage_info(self) -> dict[str, Any]:
+        """Get storage information.
+
+        Returns:
+            Dictionary containing used, free, total storage (GB) and usage percent.
+        """
         if psutil is None:
             return {
                 "used_gb": None,
@@ -148,6 +208,11 @@ class SystemMonitor:
         }
 
     def _get_platform_info(self) -> dict[str, str]:
+        """Get platform information.
+
+        Returns:
+            Dictionary containing system, machine, and processor information.
+        """
         import platform
 
         return {
@@ -161,6 +226,11 @@ _monitor: SystemMonitor | None = None
 
 
 def get_monitor() -> SystemMonitor:
+    """Get global system monitor instance.
+
+    Returns:
+        Singleton instance of the system monitor.
+    """
     global _monitor
     if _monitor is None:
         _monitor = SystemMonitor()
@@ -170,6 +240,15 @@ def get_monitor() -> SystemMonitor:
 def start_monitoring(
     output_dir: str = "tmp", refresh_interval: float = 2.0
 ) -> SystemMonitor:
+    """Start system monitoring.
+
+    Args:
+        output_dir: Output directory.
+        refresh_interval: Data collection refresh interval in seconds.
+
+    Returns:
+        System monitor instance.
+    """
     global _monitor
     if _monitor is None or str(_monitor.output_dir) != str(Path(output_dir)):
         if _monitor is not None:
@@ -182,6 +261,7 @@ def start_monitoring(
 
 
 def stop_monitoring() -> None:
+    """Stop system monitoring."""
     global _monitor
     if _monitor is not None:
         _monitor.stop()

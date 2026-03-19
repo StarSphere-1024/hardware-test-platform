@@ -21,6 +21,8 @@ from .result_store import ResultStore
 
 
 class UnifiedLogger:
+    """Unified logger creating separate log files for each request."""
+
     def __init__(self, logs_dir: str | Path = "logs", verbose_level: int = 0) -> None:
         """Initialize unified logger.
 
@@ -61,6 +63,12 @@ class UnifiedLogger:
 
 
 class ExecutionObserver:
+    """Execution observer for recording events, snapshots, and reports.
+
+    Tracks task states, collects events, writes result snapshots, and generates
+    final reports.
+    """
+
     def __init__(
         self,
         *,
@@ -70,6 +78,15 @@ class ExecutionObserver:
         report_generator: ReportGenerator,
         logger: UnifiedLogger,
     ) -> None:
+        """Initialize ExecutionObserver.
+
+        Args:
+            resolved_config: Resolved execution configuration.
+            result_store: Result store.
+            event_store: Event store.
+            report_generator: Report generator.
+            logger: Unified logger.
+        """
         self.resolved_config = resolved_config
         self.result_store = result_store
         self.event_store = event_store
@@ -90,6 +107,11 @@ class ExecutionObserver:
 
     @property
     def request_id(self) -> str:
+        """Get the current request ID.
+
+        Returns:
+            Unique request identifier.
+        """
         return str(
             self.resolved_config.request.get(
                 "request_id", self.resolved_config.request.get("kind", "request")
@@ -97,6 +119,11 @@ class ExecutionObserver:
         )
 
     def on_plan_created(self, plan: ExecutionPlan) -> None:
+        """Handle plan created event.
+
+        Args:
+            plan: Created execution plan object.
+        """
         with self._lock:
             self.plan_tasks = {task.task_id: task for task in plan.tasks}
             self._append_event(
@@ -125,6 +152,14 @@ class ExecutionObserver:
         attempt: int | None = None,
         status_before: str | None = None,
     ) -> None:
+        """Handle task started event.
+
+        Args:
+            task: Task that started executing.
+            plan_id: Execution plan ID.
+            attempt: Current attempt number.
+            status_before: Status before task started.
+        """
         with self._lock:
             self.task_states[task.task_id] = ResultStatus.RUNNING.value
             self.task_started_at.setdefault(task.task_id, datetime.now(UTC))
@@ -155,6 +190,16 @@ class ExecutionObserver:
         retry_interval_seconds: int,
         last_result: ExecutionResult,
     ) -> None:
+        """Handle task retried event.
+
+        Args:
+            task: Task being retried.
+            plan_id: Execution plan ID.
+            current_attempt: Current attempt number.
+            next_attempt: Next attempt number.
+            retry_interval_seconds: Retry interval in seconds.
+            last_result: Previous execution result.
+        """
         with self._lock:
             self.task_states[task.task_id] = "retrying"
             self._append_event(
@@ -178,6 +223,13 @@ class ExecutionObserver:
     def on_task_finished(
         self, task: ExecutionTask, result: ExecutionResult, *, plan_id: str
     ) -> None:
+        """Handle task finished event.
+
+        Args:
+            task: Completed task.
+            result: Task execution result.
+            plan_id: Execution plan ID.
+        """
         with self._lock:
             normalized = normalize_status(result.status)
             self.task_states[task.task_id] = normalized
@@ -225,6 +277,16 @@ class ExecutionObserver:
         plan: ExecutionPlan,
         context: ExecutionContext,
     ) -> list[str]:
+        """Handle execution finished event, generating reports and snapshots.
+
+        Args:
+            root_result: Root execution result.
+            plan: Execution plan.
+            context: Execution context.
+
+        Returns:
+            List of generated artifact URIs.
+        """
         with self._lock:
             snapshot = self._write_snapshot(
                 plan.plan_id,
@@ -263,6 +325,16 @@ class ExecutionObserver:
         root_result: ExecutionResult | None = None,
         runtime_state: dict[str, Any] | None = None,
     ) -> ResultSnapshot:
+        """Write a result snapshot.
+
+        Args:
+            plan_id: Execution plan ID.
+            root_result: Root execution result.
+            runtime_state: Runtime state.
+
+        Returns:
+            Written result snapshot.
+        """
         counters = self._build_counters()
         fixture_summary = self._build_fixture_summary(root_result)
         case_summaries = self._build_case_summaries(root_result)
@@ -287,6 +359,11 @@ class ExecutionObserver:
         return snapshot
 
     def _build_counters(self) -> dict[str, int]:
+        """Build task status counters.
+
+        Returns:
+            Dictionary containing task counts by status.
+        """
         counters: dict[str, int] = {}
         for status in self.task_states.values():
             counters[status] = counters.get(status, 0) + 1
@@ -295,6 +372,14 @@ class ExecutionObserver:
     def _build_fixture_summary(
         self, root_result: ExecutionResult | None
     ) -> dict[str, Any]:
+        """Build fixture summary.
+
+        Args:
+            root_result: Root execution result.
+
+        Returns:
+            Fixture summary dictionary.
+        """
         if root_result is None:
             return {}
         return {
@@ -307,6 +392,14 @@ class ExecutionObserver:
     def _build_case_summaries(
         self, root_result: ExecutionResult | None
     ) -> list[dict[str, Any]]:
+        """Build case summaries.
+
+        Args:
+            root_result: Root execution result.
+
+        Returns:
+            List of case summary dictionaries.
+        """
         case_summaries: list[dict[str, Any]] = []
         if root_result is None:
             for task in self.plan_tasks.values():
@@ -336,6 +429,14 @@ class ExecutionObserver:
     def _build_case_summary_from_result(
         self, case_result: ExecutionResult
     ) -> dict[str, Any]:
+        """Build case summary from execution result.
+
+        Args:
+            case_result: Case execution result.
+
+        Returns:
+            Case summary dictionary.
+        """
         return {
             "task_id": case_result.task_id,
             "name": case_result.name,
@@ -352,6 +453,16 @@ class ExecutionObserver:
         inferred_status: str,
         child_statuses: list[str],
     ) -> dict[str, Any]:
+        """Build case summary from task.
+
+        Args:
+            task: Execution task.
+            inferred_status: Inferred status.
+            child_statuses: List of child task statuses.
+
+        Returns:
+            Case summary dictionary.
+        """
         started_at = self.task_started_at.get(task.task_id)
         duration_ms = None
         if started_at is not None and inferred_status == ResultStatus.RUNNING.value:
@@ -371,6 +482,14 @@ class ExecutionObserver:
         }
 
     def _collect_child_statuses(self, parent_task_id: str) -> list[str]:
+        """Collect child task statuses.
+
+        Args:
+            parent_task_id: Parent task ID.
+
+        Returns:
+            List of child task statuses.
+        """
         child_statuses: list[str] = []
         for task in self.plan_tasks.values():
             if task.parent_task_id != parent_task_id:
@@ -385,6 +504,15 @@ class ExecutionObserver:
         return child_statuses
 
     def _infer_task_status(self, task_id: str, child_statuses: list[str]) -> str:
+        """Infer task status from child statuses.
+
+        Args:
+            task_id: Task ID.
+            child_statuses: List of child task statuses.
+
+        Returns:
+            Inferred task status.
+        """
         direct_state = self.task_states.get(task_id)
         if direct_state is not None:
             if direct_state == "retrying":
@@ -407,6 +535,14 @@ class ExecutionObserver:
         return "pending"
 
     def _summarize_statuses(self, statuses: list[str]) -> dict[str, int]:
+        """Summarize status list.
+
+        Args:
+            statuses: List of statuses.
+
+        Returns:
+            Status count dictionary.
+        """
         summary: dict[str, int] = {}
         for status in statuses:
             normalized = ResultStatus.RUNNING.value if status == "retrying" else status
@@ -416,6 +552,16 @@ class ExecutionObserver:
     def _infer_case_message(
         self, case_name: str, status: str, child_statuses: list[str]
     ) -> str:
+        """Infer case message.
+
+        Args:
+            case_name: Case name.
+            status: Status.
+            child_statuses: List of child task statuses.
+
+        Returns:
+            Case status message.
+        """
         if child_statuses:
             summary = self._summarize_statuses(child_statuses)
             ordered = ", ".join(
@@ -433,6 +579,14 @@ class ExecutionObserver:
         return f"case status: {status}"
 
     def _infer_current_status(self, counters: dict[str, int]) -> str:
+        """Infer current overall status.
+
+        Args:
+            counters: Status counters.
+
+        Returns:
+            Current status string.
+        """
         if counters.get(ResultStatus.RUNNING.value) or counters.get("retrying"):
             return ResultStatus.RUNNING.value
         for terminal in ("failed", "timeout", "aborted"):
@@ -445,6 +599,14 @@ class ExecutionObserver:
         return "pending"
 
     def _sanitize_runtime_state(self, runtime_state: dict[str, Any]) -> dict[str, Any]:
+        """Sanitize runtime state.
+
+        Args:
+            runtime_state: Raw runtime state.
+
+        Returns:
+            Sanitized runtime state dictionary.
+        """
         sanitized: dict[str, Any] = {}
         for key, value in runtime_state.items():
             if key == "observability":
@@ -465,6 +627,19 @@ class ExecutionObserver:
         status_after: str | None = None,
         payload: dict[str, Any] | None = None,
     ) -> None:
+        """Append an event to the event store.
+
+        Args:
+            event_type: Event type.
+            status: Event status.
+            message: Event message.
+            plan_id: Execution plan ID.
+            task: Associated task.
+            attempt: Attempt number.
+            status_before: Status before event.
+            status_after: Status after event.
+            payload: Additional event data.
+        """
         event = ExecutionEvent(
             event_id=str(uuid.uuid4()),
             request_id=self.request_id,
@@ -487,6 +662,14 @@ class ExecutionObserver:
 
 
 def root_result_to_task(result: ExecutionResult) -> ExecutionTask:
+    """Convert an execution result to a task object.
+
+    Args:
+        result: Execution result object.
+
+    Returns:
+        Corresponding task object.
+    """
     return ExecutionTask(
         task_id=result.task_id,
         task_type=result.task_type,

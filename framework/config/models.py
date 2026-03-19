@@ -8,6 +8,14 @@ from typing import Any
 
 
 def to_plain_data(value: Any) -> Any:
+    """Convert dataclass object to plain dictionary data.
+
+    Args:
+        value: Any value, possibly a dataclass object.
+
+    Returns:
+        Converted dictionary or original value.
+    """
     if is_dataclass(value):
         return {
             item.name: to_plain_data(getattr(value, item.name))
@@ -26,12 +34,21 @@ def to_plain_data(value: Any) -> Any:
 
 @dataclass(slots=True)
 class SerializableModel:
+    """Serializable model base class."""
+
     def to_dict(self) -> dict[str, Any]:
+        """Convert model to dictionary format.
+
+        Returns:
+            Dictionary containing model data.
+        """
         return to_plain_data(self)
 
 
 @dataclass(slots=True)
 class ProductConfig(SerializableModel):
+    """Product configuration."""
+
     sku: str | None = None
     stage: str | None = None
     default_board_profile: str | None = None
@@ -39,12 +56,25 @@ class ProductConfig(SerializableModel):
 
 @dataclass(slots=True)
 class InterfaceBinding(SerializableModel):
+    """Interface binding configuration."""
+
     items: list[str] = field(default_factory=list)
     description: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_config(cls, value: Any) -> InterfaceBinding:
+        """Create interface binding object from configuration data.
+
+        Args:
+            value: Configuration data, can be list or dictionary.
+
+        Returns:
+            InterfaceBinding object.
+
+        Raises:
+            TypeError: When configuration data format is unsupported.
+        """
         if isinstance(value, list):
             items = [item for item in value if isinstance(item, str)]
             return cls(
@@ -70,6 +100,8 @@ class InterfaceBinding(SerializableModel):
 
 @dataclass(slots=True)
 class RuntimeDefaults(SerializableModel):
+    """Runtime default configuration."""
+
     default_timeout: int = 60
     default_retry: int = 0
     default_retry_interval: int = 0
@@ -78,6 +110,8 @@ class RuntimeDefaults(SerializableModel):
 
 @dataclass(slots=True)
 class ObservabilityConfig(SerializableModel):
+    """Observability configuration."""
+
     report_enabled: bool = True
     dashboard_enabled: bool = False
     dashboard_auto_exit_on_success_seconds: int | None = 3
@@ -86,12 +120,22 @@ class ObservabilityConfig(SerializableModel):
 
 @dataclass(slots=True)
 class GlobalConfig(SerializableModel):
+    """Global configuration."""
+
     product: ProductConfig
     runtime: RuntimeDefaults = field(default_factory=RuntimeDefaults)
     observability: ObservabilityConfig = field(default_factory=ObservabilityConfig)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> GlobalConfig:
+        """Create global configuration object from dictionary data.
+
+        Args:
+            data: Dictionary containing global configuration data.
+
+        Returns:
+            GlobalConfig object.
+        """
         product_data = dict(data["product"])
         product = ProductConfig(
             default_board_profile=product_data.get(
@@ -107,6 +151,8 @@ class GlobalConfig(SerializableModel):
 
 @dataclass(slots=True)
 class BoardProfile(SerializableModel):
+    """Board profile configuration."""
+
     profile_name: str
     platform: str
     product: ProductConfig
@@ -118,6 +164,14 @@ class BoardProfile(SerializableModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BoardProfile:
+        """Create board profile configuration object from dictionary data.
+
+        Args:
+            data: Dictionary containing board profile configuration data.
+
+        Returns:
+            BoardProfile object.
+        """
         product_data = dict(data["product"])
         return cls(
             profile_name=data["profile_name"],
@@ -139,6 +193,8 @@ class BoardProfile(SerializableModel):
 
 @dataclass(slots=True)
 class FunctionInvocationSpec(SerializableModel):
+    """Function invocation specification."""
+
     name: str
     enabled: bool = True
     params: dict[str, Any] = field(default_factory=dict)
@@ -153,6 +209,14 @@ class FunctionInvocationSpec(SerializableModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FunctionInvocationSpec:
+        """Create function invocation specification object from dictionary data.
+
+        Args:
+            data: Dictionary containing function invocation data.
+
+        Returns:
+            FunctionInvocationSpec object.
+        """
         return cls(
             name=data["name"],
             enabled=data.get("enabled", True),
@@ -172,6 +236,8 @@ class FunctionInvocationSpec(SerializableModel):
 
 @dataclass(slots=True)
 class CaseSpec(SerializableModel):
+    """Case specification."""
+
     case_name: str
     module: str
     board_profile: str | None = None
@@ -189,6 +255,14 @@ class CaseSpec(SerializableModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> CaseSpec:
+        """Create case specification object from dictionary data.
+
+        Args:
+            data: Dictionary containing case data.
+
+        Returns:
+            CaseSpec object.
+        """
         return cls(
             case_name=data["case_name"],
             module=data["module"],
@@ -214,6 +288,8 @@ class CaseSpec(SerializableModel):
 
 @dataclass(slots=True)
 class FixtureSpec(SerializableModel):
+    """Fixture specification."""
+
     fixture_name: str
     board_profile: str | None = None
     description: str | None = None
@@ -232,6 +308,14 @@ class FixtureSpec(SerializableModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FixtureSpec:
+        """Create fixture specification object from dictionary data.
+
+        Args:
+            data: Dictionary containing fixture data.
+
+        Returns:
+            FixtureSpec object.
+        """
         return cls(
             fixture_name=data["fixture_name"],
             board_profile=data.get("board_profile"),
@@ -255,6 +339,8 @@ class FixtureSpec(SerializableModel):
 
 @dataclass(slots=True)
 class ResolvedExecutionConfig(SerializableModel):
+    """Resolved execution configuration."""
+
     request: dict[str, Any]
     global_config: GlobalConfig
     board_profile: BoardProfile

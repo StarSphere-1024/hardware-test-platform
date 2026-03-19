@@ -12,6 +12,16 @@ def test_rtc_read(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
+    """Read current time from RTC device.
+
+    Args:
+        rtc_device: RTC device path, or None for default.
+        capability_registry: Registry of available capabilities.
+        execution_context: Execution context with injected capabilities.
+
+    Returns:
+        Dictionary with code, status, message, and details about the RTC read operation.
+    """
     registry = (
         capability_registry
         or getattr(execution_context, "capability_registry", None)

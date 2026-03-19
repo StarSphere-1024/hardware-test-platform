@@ -15,8 +15,15 @@ from .base import CommandResult, PlatformAdapter
 
 
 class LinuxAdapter(PlatformAdapter):
+    """Linux platform adapter for local Linux system operations."""
+
     @property
     def platform_name(self) -> str:
+        """Get platform name.
+
+        Returns:
+            Platform name "linux".
+        """
         return "linux"
 
     def execute(
@@ -26,6 +33,16 @@ class LinuxAdapter(PlatformAdapter):
         timeout: int | None = None,
         shell: bool | None = None,
     ) -> CommandResult:
+        """Execute system command.
+
+        Args:
+            command: Command to execute.
+            timeout: Timeout in seconds, optional.
+            shell: Whether to use shell execution, optional.
+
+        Returns:
+            CommandResult containing execution result.
+        """
         started_at = time.perf_counter()
         if isinstance(command, str):
             use_shell = True if shell is None else shell
@@ -64,15 +81,46 @@ class LinuxAdapter(PlatformAdapter):
             )
 
     def _path_exists(self, path: str | Path) -> bool:
+        """Check if path exists.
+
+        Args:
+            path: Path to check.
+
+        Returns:
+            True if path exists, False otherwise.
+        """
         return Path(path).exists()
 
     def _read_text(self, path: str | Path, *, encoding: str = "utf-8") -> str:
+        """Read file text content.
+
+        Args:
+            path: File path.
+            encoding: File encoding, defaults to utf-8.
+
+        Returns:
+            File text content.
+        """
         return Path(path).read_text(encoding=encoding)
 
     def _list_paths(self, pattern: str) -> list[str]:
+        """List file paths matching pattern.
+
+        Args:
+            pattern: Filename pattern.
+
+        Returns:
+            List of matching paths.
+        """
         return sorted(str(p) for p in Path().glob(pattern))
 
     def get_system_info(self) -> dict[str, Any]:
+        """Get system information.
+
+        Returns:
+            Dictionary containing system information including platform, hostname,
+            kernel, etc.
+        """
         info = {
             "platform": self.platform_name,
             "hostname": socket.gethostname(),

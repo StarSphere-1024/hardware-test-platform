@@ -8,13 +8,36 @@ from ..base import GPIOCapabilityContract
 
 
 class LinuxGPIOCapability(GPIOCapabilityContract):
+    """Linux GPIO capability implementation based on Linux GPIO subsystem."""
+
     def list_chips(self) -> list[str]:
+        """List GPIO chips in the system.
+
+        Returns:
+            Sorted list of GPIO chip paths.
+        """
         return sorted(self.adapter._list_paths("/dev/gpiochip*"))
 
     def chip_exists(self, chip: str) -> bool:
+        """Check if GPIO chip exists.
+
+        Args:
+            chip: GPIO chip path.
+
+        Returns:
+            True if chip exists, False otherwise.
+        """
         return self.adapter._path_exists(chip)
 
     def physical_to_logical(self, pin: int) -> int | None:
+        """Convert physical pin number to logical pin number.
+
+        Args:
+            pin: Physical pin number.
+
+        Returns:
+            Logical pin number, or None if conversion fails.
+        """
         mapping = self.board_profile.get("metadata", {}).get("gpio_mapping", {})
         if not isinstance(mapping, dict) or not mapping:
             mapping = self.board_profile.get("gpio", {}).get("physical_to_logical", {})
@@ -24,6 +47,15 @@ class LinuxGPIOCapability(GPIOCapabilityContract):
         return int(value) if value is not None else None
 
     def describe_pin(self, physical_pin: int) -> dict[str, Any]:
+        """Describe pin information.
+
+        Args:
+            physical_pin: Physical pin number.
+
+        Returns:
+            Dictionary containing pin information including logical pin, chip info,
+            and availability.
+        """
         logical_pin = self.physical_to_logical(physical_pin)
         chips = self.list_chips()
         available = logical_pin is not None and bool(chips)

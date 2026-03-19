@@ -7,9 +7,21 @@ from framework.domain.execution import ExecutionTask, RetryPolicy
 
 
 class CaseRunner:
+    """Build case-level execution tasks."""
+
     def build_case_task(
         self, case_spec: CaseSpec, *, parent_task_id: str | None = None, index: int = 0
     ) -> tuple[ExecutionTask, list[ExecutionTask]]:
+        """Build case execution task and its function tasks.
+
+        Args:
+            case_spec: Case specification configuration.
+            parent_task_id: Parent task ID for task hierarchy.
+            index: Case index for generating unique task ID.
+
+        Returns:
+            Tuple containing case task and list of function tasks.
+        """
         case_task_id = f"case.{index}.{case_spec.case_name}"
         case_task = ExecutionTask(
             task_id=case_task_id,
@@ -64,6 +76,18 @@ class CaseRunner:
         task_index: int,
         previous_task_id: str | None,
     ) -> ExecutionTask:
+        """Build function execution task.
+
+        Args:
+            function_spec: Function invocation specification.
+            case_name: Name of the parent case.
+            parent_task_id: Parent task ID.
+            task_index: Task index.
+            previous_task_id: Previous task ID for dependency chaining.
+
+        Returns:
+            Function execution task.
+        """
         return ExecutionTask(
             task_id=f"function.{case_name}.{task_index}.{function_spec.name}",
             task_type="function",

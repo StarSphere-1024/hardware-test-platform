@@ -16,6 +16,9 @@ extend-exclude = [
 ]
 
 [lint]
+# 启用预览模式 (DOC 规则需要)
+preview = true
+
 # 启用的规则类别
 select = [
     "E",      # pycodestyle errors
@@ -36,6 +39,8 @@ select = [
     "S",      # flake8-bandit (安全问题)
     "ANN",    # flake8-annotations (类型注解)
     "PTH",    # flake8-use-pathlib (pathlib 替代 os.path)
+    "D",      # pydocstyle (文档字符串规范)
+    "DOC",    # flake8-docstrings (Google/NumPy 风格检查)
 ]
 
 # 忽略的规则
@@ -45,22 +50,33 @@ ignore = [
     "RET504", # return 前赋值 (有时为了清晰)
     "UP042",  # StrEnum 建议 (保持兼容性)
     "PTH123", # open 语句建议 (保持简洁写法)
+    # TODO: 以下 docstring 规则问题将逐步修复
+    # "D101",  # 缺少类 docstring - 待修复
+    # "D102",  # 缺少公共方法 docstring - 待修复
+    # "D103",  # 缺少公共函数 docstring - 待修复
+    # "D107",  # 缺少 __init__ docstring - 待修复
+    # "D105",  # 缺少魔术方法 docstring - 待修复
 ]
 
 # 按文件忽略规则
 [lint.per-file-ignores]
-# 测试文件
+# 测试文件 (豁免 docstring 要求)
 "tests/**/*.py" = [
     "T201",   # 允许 print
     "N",      # 宽松命名
     "S",      # 安全规则 (测试数据非生产)
     "ANN",    # 不强制类型注解
+    "D",      # 不强制 docstring (测试函数名即文档)
+]
+"cases/**/*.py" = [
+    "D",      # 不强制 docstring (测试用例名即文档)
 ]
 # 脚本文件
 "scripts/**/*.py" = [
     "T201",   # 允许 print
     "S404",   # subprocess 导入
     "S603",   # subprocess 调用
+    "D",      # 不强制 docstring (部署脚本)
 ]
 # CLI 工具
 "framework/cli/**/*.py" = [
@@ -125,6 +141,10 @@ ignore = [
 # 导入排序配置
 known-first-party = ["framework", "functions", "cases", "fixtures", "config"]
 combine-as-imports = true
+
+[lint.pydocstyle]
+# 使用 Google 风格的 docstring
+convention = "google"
 
 [lint.mccabe]
 # 最大圈复杂度 (10 for strict financial/low-level projects)

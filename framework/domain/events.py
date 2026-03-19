@@ -11,6 +11,8 @@ from ._serialization import SerializableModel
 
 
 class EventType(str, Enum):
+    """Execution event types."""
+
     REQUEST_RECEIVED = "request_received"
     PLAN_CREATED = "plan_created"
     TASK_STARTED = "task_started"
@@ -22,6 +24,8 @@ class EventType(str, Enum):
 
 
 class EventStatus(str, Enum):
+    """Event status."""
+
     INFO = "info"
     SUCCESS = "success"
     WARNING = "warning"
@@ -30,6 +34,8 @@ class EventStatus(str, Enum):
 
 @dataclass(slots=True)
 class ExecutionEvent(SerializableModel):
+    """Execution event model."""
+
     event_id: str
     request_id: str
     plan_id: str
@@ -49,6 +55,8 @@ class ExecutionEvent(SerializableModel):
 
 @dataclass(slots=True)
 class EventRecord(SerializableModel):
+    """Event record model."""
+
     sequence: int
     event: ExecutionEvent
     stored_at: datetime

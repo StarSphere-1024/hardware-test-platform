@@ -41,9 +41,18 @@ from framework.platform.registry import PlatformRegistry
 
 
 class CLIError(Exception):
+    """Base class for CLI errors."""
+
     def __init__(
         self, message: str, *, exit_code: int = 2, payload: dict[str, Any] | None = None
     ) -> None:
+        """Initialize CLIError.
+
+        Args:
+            message: Error message.
+            exit_code: Exit code, defaults to 2.
+            payload: Error payload data for JSON output.
+        """
         super().__init__(message)
         self.exit_code = exit_code
         self.payload = dict(payload or {"error": message})
@@ -100,6 +109,14 @@ def _root_matches_cli_paths(candidate: Path, args: argparse.Namespace) -> bool:
 
 
 def resolve_workspace_root(args: argparse.Namespace) -> Path:
+    """Resolve workspace root directory from CLI arguments.
+
+    Args:
+        args: Namespace containing workspace_root, config, and other parameters.
+
+    Returns:
+        Resolved workspace root directory path.
+    """
     explicit_root = getattr(args, "workspace_root", None)
     if explicit_root not in (None, ""):
         return Path(str(explicit_root)).resolve()
@@ -132,6 +149,14 @@ def _normalize_path_arg(value: str | None, *, workspace_root: Path) -> str | Non
 
 
 def normalize_cli_args(args: argparse.Namespace) -> argparse.Namespace:
+    """Normalize path configurations in CLI arguments.
+
+    Args:
+        args: Namespace containing config, global_config, and other parameters.
+
+    Returns:
+        Namespace object with normalized paths.
+    """
     workspace_root = resolve_workspace_root(args)
     args.workspace_root = str(workspace_root)
     if hasattr(args, "config"):
@@ -147,6 +172,15 @@ def normalize_cli_args(args: argparse.Namespace) -> argparse.Namespace:
 def create_base_parser(
     description: str, *, include_board_profile: bool = False
 ) -> argparse.ArgumentParser:
+    """Create base CLI argument parser.
+
+    Args:
+        description: Parser description text.
+        include_board_profile: Whether to include board profile argument.
+
+    Returns:
+        Configured ArgumentParser object.
+    """
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "--request-id",
@@ -243,6 +277,14 @@ def create_base_parser(
 
 
 def cli_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
+    """Extract override configuration from CLI arguments.
+
+    Args:
+        args: Parsed CLI namespace.
+
+    Returns:
+        Dictionary containing override configuration.
+    """
     overrides: dict[str, Any] = {}
     for key in (
         "timeout",
@@ -263,6 +305,16 @@ def cli_overrides_from_args(args: argparse.Namespace) -> dict[str, Any]:
 def build_execution_request(
     args: argparse.Namespace, *, target_type: str, target_name: str
 ) -> ExecutionRequest:
+    """Build execution request object.
+
+    Args:
+        args: Parsed CLI namespace.
+        target_type: Target type (fixture/case/function).
+        target_name: Target name.
+
+    Returns:
+        ExecutionRequest object.
+    """
     return ExecutionRequest(
         request_id=args.request_id or f"req-{uuid.uuid4().hex[:12]}",
         target_type=target_type,
@@ -278,6 +330,15 @@ def build_execution_request(
 def build_fixture_resolved_config(
     args: argparse.Namespace, request: ExecutionRequest
 ) -> ResolvedExecutionConfig:
+    """Build resolved configuration for fixture test.
+
+    Args:
+        args: Parsed CLI namespace.
+        request: Execution request object.
+
+    Returns:
+        ResolvedExecutionConfig object.
+    """
     resolver = ConfigResolver(Path(args.workspace_root).resolve())
     return resolver.resolve_fixture(
         args.config,
@@ -291,6 +352,15 @@ def build_fixture_resolved_config(
 def build_case_resolved_config(
     args: argparse.Namespace, request: ExecutionRequest
 ) -> ResolvedExecutionConfig:
+    """Build resolved configuration for case test.
+
+    Args:
+        args: Parsed CLI namespace.
+        request: Execution request object.
+
+    Returns:
+        ResolvedExecutionConfig object.
+    """
     resolver = ConfigResolver(Path(args.workspace_root).resolve())
     return resolver.resolve_case(
         args.config,
@@ -308,6 +378,17 @@ def build_function_resolved_config(
     function_name: str,
     params: dict[str, Any],
 ) -> ResolvedExecutionConfig:
+    """Build resolved configuration for function test.
+
+    Args:
+        args: Parsed CLI namespace.
+        request: Execution request object.
+        function_name: Function name.
+        params: Function parameters.
+
+    Returns:
+        ResolvedExecutionConfig object.
+    """
     workspace_root = Path(args.workspace_root).resolve()
     loader = ConfigLoader(workspace_root)
     global_config, global_source = loader.load_global_config(args.global_config)
@@ -424,6 +505,16 @@ def build_function_plan(
     function_name: str,
     params: dict[str, Any],
 ) -> ExecutionPlan:
+    """Build function execution plan.
+
+    Args:
+        resolved_config: Resolved execution configuration.
+        function_name: Function name.
+        params: Function parameters.
+
+    Returns:
+        ExecutionPlan object.
+    """
     runtime = resolved_config.resolved_runtime
     root_task = ExecutionTask(
         task_id=f"function.{function_name}",
@@ -452,6 +543,17 @@ def build_function_plan(
 
 
 def load_callable(callable_path: str) -> tuple[str, Callable[..., Any]]:
+    """Load callable object.
+
+    Args:
+        callable_path: Callable path in module:function format.
+
+    Returns:
+        Tuple containing function name and callable object.
+
+    Raises:
+        CLIError: When path format is invalid or callable not found.
+    """
     if ":" in callable_path:
         module_name, attr_name = callable_path.split(":", 1)
     elif "." in callable_path:
@@ -468,6 +570,15 @@ def load_callable(callable_path: str) -> tuple[str, Callable[..., Any]]:
 def discover_workspace_functions(
     workspace_root: str | Path, function_names: set[str]
 ) -> dict[str, Callable[..., Any]]:
+    """Discover functions in workspace.
+
+    Args:
+        workspace_root: Workspace root directory.
+        function_names: Set of function names.
+
+    Returns:
+        Dictionary mapping function names to callable objects.
+    """
     registry: dict[str, Callable[..., Any]] = {}
     functions_root = Path(workspace_root).resolve() / "functions"
     if not functions_root.exists():
@@ -491,6 +602,17 @@ def discover_workspace_functions(
 
 
 def parse_json_params(raw: str | None) -> dict[str, Any]:
+    """Parse JSON parameter string.
+
+    Args:
+        raw: Raw JSON string.
+
+    Returns:
+        Parsed parameter dictionary.
+
+    Raises:
+        CLIError: When JSON format is invalid or not an object type.
+    """
     if raw in (None, "", "null"):
         return {}
     try:
@@ -515,6 +637,23 @@ def execute_plan(
     dashboard_keep_open: bool = False,
     verbose_level: int = 0,
 ) -> dict[str, Any]:
+    """Execute plan and return results.
+
+    Args:
+        resolved_config: Resolved execution configuration.
+        plan: Execution plan.
+        workspace_root: Workspace root directory.
+        artifacts_root: Output directory root path.
+        function_registry: Function registry.
+        dashboard_enabled: Whether dashboard is enabled.
+        dashboard_refresh_interval: Dashboard refresh interval in seconds.
+        dashboard_start_monitor: Whether to start system monitoring.
+        dashboard_keep_open: Whether to keep dashboard open after execution.
+        verbose_level: Log verbosity level.
+
+    Returns:
+        Dictionary containing execution results, report paths, and other information.
+    """
     workspace = Path(workspace_root).resolve()
     outputs_root = Path(artifacts_root).resolve() if artifacts_root else workspace
     logs_dir = outputs_root / "logs"
@@ -698,8 +837,21 @@ def _attach_dashboard(
 
 
 def print_payload(payload: dict[str, Any]) -> None:
+    """Print execution results in JSON format.
+
+    Args:
+        payload: Execution result dictionary.
+    """
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
 def payload_exit_code(payload: dict[str, Any]) -> int:
+    """Return exit code based on execution results.
+
+    Args:
+        payload: Execution result dictionary.
+
+    Returns:
+        0 for success, 1 for failure.
+    """
     return 0 if payload.get("status") == "passed" else 1

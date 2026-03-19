@@ -11,6 +11,8 @@ from ._serialization import SerializableModel
 
 
 class ResultStatus(str, Enum):
+    """Execution result status."""
+
     PASSED = "passed"
     FAILED = "failed"
     RUNNING = "running"
@@ -21,6 +23,8 @@ class ResultStatus(str, Enum):
 
 @dataclass(slots=True)
 class ReportArtifact(SerializableModel):
+    """Report artifact model."""
+
     artifact_type: str
     uri: str
     content_type: str | None = None
@@ -29,6 +33,8 @@ class ReportArtifact(SerializableModel):
 
 @dataclass(slots=True)
 class ExecutionResult(SerializableModel):
+    """Execution result model."""
+
     task_id: str
     task_type: str
     name: str
@@ -47,6 +53,8 @@ class ExecutionResult(SerializableModel):
 
 @dataclass(slots=True)
 class ResultSnapshot(SerializableModel):
+    """Result snapshot model."""
+
     request_id: str
     plan_id: str
     updated_at: datetime
@@ -61,6 +69,8 @@ class ResultSnapshot(SerializableModel):
 
 @dataclass(slots=True)
 class DashboardSnapshot(SerializableModel):
+    """Dashboard snapshot model."""
+
     request_id: str
     plan_id: str
     updated_at: datetime

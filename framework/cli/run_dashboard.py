@@ -8,6 +8,14 @@ from .common import normalize_cli_args
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Main entry function for terminal dashboard rendering.
+
+    Args:
+        argv: CLI argument list.
+
+    Returns:
+        Exit code, always 0.
+    """
     import argparse
 
     parser = argparse.ArgumentParser(description="Render the terminal dashboard")

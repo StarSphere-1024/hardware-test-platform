@@ -12,7 +12,14 @@ from framework.domain.results import ExecutionResult, ReportArtifact, ResultSnap
 
 
 class ReportGenerator:
+    """Report generator."""
+
     def __init__(self, reports_dir: str | Path = "reports") -> None:
+        """Initialize ReportGenerator.
+
+        Args:
+            reports_dir: Report output directory.
+        """
         self.reports_dir = Path(reports_dir)
         self.reports_dir.mkdir(parents=True, exist_ok=True)
 
@@ -24,6 +31,17 @@ class ReportGenerator:
         resolved_config: ResolvedExecutionConfig,
         events: list[EventRecord],
     ) -> list[ReportArtifact]:
+        """Generate text and JSON reports.
+
+        Args:
+            root_result: Root execution result.
+            snapshot: Result snapshot.
+            resolved_config: Resolved execution configuration.
+            events: List of event records.
+
+        Returns:
+            List of report artifacts.
+        """
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         sku = resolved_config.board_profile.product.sku or "UNKNOWN"
         suffix = str(root_result.status)
@@ -100,6 +118,14 @@ class ReportGenerator:
     def _collect_residual_risks(
         self, root_result: ExecutionResult
     ) -> list[dict[str, str]]:
+        """Collect residual risks from execution results.
+
+        Args:
+            root_result: Root execution result.
+
+        Returns:
+            List of residual risk dictionaries.
+        """
         residual_risks: list[dict[str, str]] = []
 
         def visit(result: ExecutionResult) -> None:

@@ -12,6 +12,16 @@ def test_gpio_mapping(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
+    """Validate GPIO mapping for a physical pin.
+
+    Args:
+        physical_pin: Physical pin number to validate.
+        capability_registry: Registry of available capabilities.
+        execution_context: Execution context with injected capabilities.
+
+    Returns:
+        Dictionary with code, status, message, and details about the GPIO mapping.
+    """
     registry = (
         capability_registry
         or getattr(execution_context, "capability_registry", None)

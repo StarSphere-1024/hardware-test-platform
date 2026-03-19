@@ -9,10 +9,21 @@ from .case_runner import CaseRunner
 
 
 class FixtureRunner:
+    """Build fixture-level execution plans."""
+
     def __init__(self) -> None:
+        """Initialize FixtureRunner."""
         self.case_runner = CaseRunner()
 
     def build_plan(self, resolved_config: ResolvedExecutionConfig) -> ExecutionPlan:
+        """Build fixture execution plan.
+
+        Args:
+            resolved_config: Resolved execution configuration.
+
+        Returns:
+            Execution plan containing all tasks.
+        """
         fixture_name = (
             resolved_config.fixture.fixture_name
             if resolved_config.fixture

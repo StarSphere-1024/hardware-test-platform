@@ -88,6 +88,14 @@ def aggregate_status(children: Iterable[ExecutionResult]) -> ResultStatus:
 
 
 def summarize_children(children: Iterable[ExecutionResult]) -> dict[str, int]:
+    """Summarize status distribution of child execution results.
+
+    Args:
+        children: Iterable of child ExecutionResult objects.
+
+    Returns:
+        Status count dictionary.
+    """
     summary: dict[str, int] = {}
     for child in children:
         status = normalize_status(child.status)

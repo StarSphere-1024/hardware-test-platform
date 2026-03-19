@@ -15,6 +15,19 @@ def test_eth_ping(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
+    """Ping a target IP address over Ethernet.
+
+    Args:
+        target_ip: IP address to ping.
+        interface: Network interface to use, or None for auto selection.
+        count: Number of ping packets to send.
+        timeout: Timeout in seconds for ping response.
+        capability_registry: Registry of available capabilities.
+        execution_context: Execution context with injected capabilities.
+
+    Returns:
+        Dictionary with code, status, message, details, and metrics about the ping operation.
+    """
     registry = (
         capability_registry
         or getattr(execution_context, "capability_registry", None)

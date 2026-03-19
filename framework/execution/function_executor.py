@@ -19,17 +19,43 @@ from .errors import FunctionNotRegisteredError, TaskExecutionError
 
 
 class FunctionExecutor:
+    """Function task execution boundary."""
+
     def __init__(
         self, function_registry: dict[str, Callable[..., Any]] | None = None
     ) -> None:
+        """Initialize FunctionExecutor.
+
+        Args:
+            function_registry: Function registry mapping names to callables.
+        """
         self.function_registry = dict(function_registry or {})
 
     def register(self, name: str, function: Callable[..., Any]) -> None:
+        """Register a function with the executor.
+
+        Args:
+            name: Function registration name.
+            function: Callable object.
+        """
         self.function_registry[name] = function
 
     def execute(
         self, task: ExecutionTask, context: ExecutionContext
     ) -> ExecutionResult:
+        """Execute a function task.
+
+        Args:
+            task: Function task to execute.
+            context: Execution context.
+
+        Returns:
+            Execution result.
+
+        Raises:
+            TaskExecutionError: When task type is unsupported or parameters are invalid.
+            FunctionNotRegisteredError: When function is not registered.
+        """
         logger = logging.getLogger("hardware_test_platform.function_executor")
 
         if task.task_type != "function":
@@ -153,6 +179,20 @@ class FunctionExecutor:
         timeout: int | None,
         context: ExecutionContext,
     ) -> Any:
+        """Invoke function in an isolated thread.
+
+        Args:
+            callable_obj: Callable object.
+            params: Function parameters.
+            timeout: Timeout in seconds.
+            context: Execution context.
+
+        Returns:
+            Function execution result.
+
+        Raises:
+            TimeoutError: When function execution times out.
+        """
         logger = logging.getLogger("hardware_test_platform.function_executor")
         invocation_params = self._build_invocation_params(callable_obj, params, context)
         logger.debug(
@@ -191,6 +231,16 @@ class FunctionExecutor:
         params: dict[str, Any],
         context: ExecutionContext,
     ) -> dict[str, Any]:
+        """Build function invocation parameters.
+
+        Args:
+            callable_obj: Callable object.
+            params: Original parameter dictionary.
+            context: Execution context.
+
+        Returns:
+            Complete invocation parameter dictionary.
+        """
         invocation_params = dict(params)
         try:
             signature = inspect.signature(callable_obj)
@@ -220,6 +270,14 @@ class FunctionExecutor:
     ) -> tuple[
         ResultStatus, int | None, str | None, dict[str, Any], dict[str, float | int]
     ]:
+        """Normalize function execution result.
+
+        Args:
+            raw_result: Raw execution result.
+
+        Returns:
+            Tuple containing status, code, message, details, and metrics.
+        """
         if raw_result is None:
             return ResultStatus.PASSED, 0, "success", {}, {}
 
@@ -264,6 +322,19 @@ class FunctionExecutor:
         details: dict[str, Any],
         metrics: dict[str, float | int],
     ) -> tuple[ResultStatus, int | None, str | None, dict[str, Any]]:
+        """Apply expectation rules to execution result.
+
+        Args:
+            expect: Expectation configuration.
+            status: Current execution status.
+            code: Current execution code.
+            message: Current message.
+            details: Current details.
+            metrics: Current metrics.
+
+        Returns:
+            Tuple containing updated status, code, message, and details.
+        """
         logger = logging.getLogger("hardware_test_platform.function_executor")
 
         if not expect:
@@ -359,6 +430,19 @@ class FunctionExecutor:
         details: dict[str, Any],
         metrics: dict[str, float | int],
     ) -> Any:
+        """Resolve value at field path for expectation.
+
+        Args:
+            field_path: Field path (dot-separated for nested access).
+            status: Execution status.
+            code: Execution code.
+            message: Execution message.
+            details: Execution details.
+            metrics: Execution metrics.
+
+        Returns:
+            Resolved field value.
+        """
         envelope: dict[str, Any] = {
             "status": status.value,
             "code": code,
@@ -386,6 +470,19 @@ class FunctionExecutor:
     def _evaluate_expectation(  # noqa: C901
         self, operator: str, actual: Any, expected: Any
     ) -> bool:
+        """Evaluate expectation rule.
+
+        Args:
+            operator: Comparison operator.
+            actual: Actual value.
+            expected: Expected value.
+
+        Returns:
+            Whether the rule passed.
+
+        Raises:
+            TaskExecutionError: When operator is unsupported.
+        """
         match operator:
             case "eq":
                 return actual == expected

@@ -15,6 +15,19 @@ def test_uart_loopback(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
+    """Perform UART loopback test on a serial port.
+
+    Args:
+        port: Serial port path to test.
+        payload: Data payload to send and verify loopback.
+        baudrate: Serial baudrate, defaults to 115200.
+        timeout: Timeout in seconds for loopback response.
+        capability_registry: Registry of available capabilities.
+        execution_context: Execution context with injected capabilities.
+
+    Returns:
+        Dictionary with code, status, message, details, and metrics about the UART loopback test.
+    """
     registry = (
         capability_registry
         or getattr(execution_context, "capability_registry", None)

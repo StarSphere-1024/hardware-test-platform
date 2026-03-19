@@ -13,6 +13,17 @@ def test_i2c_scan(
     capability_registry: dict[str, Any] | None = None,
     execution_context: Any | None = None,
 ) -> dict[str, Any]:
+    """Scan I2C buses for connected devices.
+
+    Args:
+        bus: Specific I2C bus to scan, or None for default.
+        scan_all: If True, scan all available I2C buses.
+        capability_registry: Registry of available capabilities.
+        execution_context: Execution context with injected capabilities.
+
+    Returns:
+        Dictionary with code, status, message, details, and metrics about the I2C scan.
+    """
     registry = (
         capability_registry
         or getattr(execution_context, "capability_registry", None)

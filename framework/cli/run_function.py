@@ -25,6 +25,15 @@ def main(
     *,
     function_registry: dict[str, Callable[..., Any]] | None = None,
 ) -> int:
+    """Main entry function for single function test execution.
+
+    Args:
+        argv: CLI argument list.
+        function_registry: Optional function registry.
+
+    Returns:
+        Exit code, 0 for success.
+    """
     parser = create_base_parser(
         "Execute a single function callable", include_board_profile=True
     )

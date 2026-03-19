@@ -16,12 +16,16 @@ _EXECUTION_MODES = {"sequential", "parallel"}
 
 @dataclass(slots=True)
 class RetryPolicy(SerializableModel):
+    """Retry policy configuration."""
+
     max_retries: int = 0
     interval_seconds: int = 0
 
 
 @dataclass(slots=True)
 class ExecutionTask(SerializableModel):
+    """Execution task model."""
+
     task_id: str
     task_type: str
     name: str
@@ -34,6 +38,11 @@ class ExecutionTask(SerializableModel):
     dependencies: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
+        """Validate task data.
+
+        Raises:
+            ValueError: When task data is invalid.
+        """
         if not self.task_id:
             raise ValueError("task_id must not be empty")
         if self.task_type not in _TASK_TYPES:
@@ -48,6 +57,8 @@ class ExecutionTask(SerializableModel):
 
 @dataclass(slots=True)
 class ExecutionPlan(SerializableModel):
+    """Execution plan model."""
+
     plan_id: str
     root_task: ExecutionTask
     tasks: list[ExecutionTask] = field(default_factory=list)
@@ -55,6 +66,11 @@ class ExecutionPlan(SerializableModel):
     resource_requirements: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Validate execution plan data.
+
+        Raises:
+            ValueError: When execution plan data is invalid.
+        """
         if not self.plan_id:
             raise ValueError("plan_id must not be empty")
         if not self.tasks:
@@ -66,6 +82,8 @@ class ExecutionPlan(SerializableModel):
 
 @dataclass(slots=True)
 class ArtifactDirectories(SerializableModel):
+    """Output directory configuration."""
+
     logs_dir: Path
     tmp_dir: Path
     reports_dir: Path
@@ -73,6 +91,8 @@ class ArtifactDirectories(SerializableModel):
 
 @dataclass(slots=True)
 class ExecutionContext(SerializableModel):
+    """Execution context model."""
+
     request_id: str
     plan_id: str
     resolved_config: ResolvedExecutionConfig

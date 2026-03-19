@@ -8,6 +8,11 @@ from .cli_dashboard import run_dashboard
 
 
 def main() -> int:
+    """Main entry point for running the terminal dashboard.
+
+    Returns:
+        Exit code, always 0.
+    """
     parser = argparse.ArgumentParser(
         description="Terminal dashboard for hardware test execution"
     )

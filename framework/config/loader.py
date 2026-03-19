@@ -32,12 +32,27 @@ _BUILTIN_GLOBAL_CONFIG: dict[str, Any] = {
 
 
 class ConfigLoader:
+    """Configuration file loader."""
+
     def __init__(self, workspace_root: str | Path) -> None:
+        """Initialize configuration loader.
+
+        Args:
+            workspace_root: Workspace root directory.
+        """
         self.workspace_root = Path(workspace_root).resolve()
 
     def load_global_config(
         self, file_path: str | Path | None = None
     ) -> tuple[GlobalConfig, str]:
+        """Load global configuration file.
+
+        Args:
+            file_path: Configuration file path, defaults to config/global_config.json.
+
+        Returns:
+            GlobalConfig object and source path string.
+        """
         if file_path is None:
             default_path = self.workspace_root / "config" / "global_config.json"
             if not default_path.exists():
@@ -61,6 +76,18 @@ class ConfigLoader:
         profile_name: str | None = None,
         file_path: str | Path | None = None,
     ) -> tuple[BoardProfile, str]:
+        """Load board profile configuration.
+
+        Args:
+            profile_name: Board profile name.
+            file_path: Configuration file path.
+
+        Returns:
+            BoardProfile object and source path string.
+
+        Raises:
+            ProfileNotSupportedError: When name or file is not provided.
+        """
         if file_path is not None:
             source_path = self.resolve_path(file_path)
         else:
@@ -85,6 +112,15 @@ class ConfigLoader:
     def load_case(
         self, file_path: str | Path, *, base_dir: str | Path | None = None
     ) -> tuple[CaseSpec, str]:
+        """Load case configuration file.
+
+        Args:
+            file_path: Configuration file path.
+            base_dir: Base directory for relative path resolution.
+
+        Returns:
+            CaseSpec object and source path string.
+        """
         source_path = self.resolve_path(file_path, base_dir=base_dir)
         raw = self._load_json(source_path)
         validate_case_data(raw, source=str(source_path))
@@ -93,6 +129,15 @@ class ConfigLoader:
     def load_fixture(
         self, file_path: str | Path, *, base_dir: str | Path | None = None
     ) -> tuple[FixtureSpec, str]:
+        """Load fixture configuration file.
+
+        Args:
+            file_path: Configuration file path.
+            base_dir: Base directory for relative path resolution.
+
+        Returns:
+            FixtureSpec object and source path string.
+        """
         source_path = self.resolve_path(file_path, base_dir=base_dir)
         raw = self._load_json(source_path)
         validate_fixture_data(raw, source=str(source_path))
@@ -104,6 +149,18 @@ class ConfigLoader:
         *,
         base_dir: str | Path | None = None,
     ) -> Path:
+        """Resolve configuration file path.
+
+        Args:
+            file_path: Configuration file path.
+            base_dir: Base directory for relative path resolution.
+
+        Returns:
+            Resolved absolute path.
+
+        Raises:
+            ConfigFileNotFoundError: When file does not exist.
+        """
         candidate = Path(file_path)
         if candidate.is_absolute():
             if candidate.exists():

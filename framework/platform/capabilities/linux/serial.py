@@ -9,13 +9,31 @@ from ..base import SerialCapabilityContract
 
 
 class LinuxSerialCapability(SerialCapabilityContract):
+    """Linux serial capability implementation.
+
+    Supports device enumeration and loopback tests.
+    """
+
     def list_ports(self) -> list[str]:
+        """List serial devices in the system.
+
+        Returns:
+            Sorted list of serial device paths.
+        """
         ports: list[str] = []
         for pattern in ("/dev/ttyS*", "/dev/ttyUSB*", "/dev/ttyACM*"):
             ports.extend(self.adapter._list_paths(pattern))
         return sorted(set(ports))
 
     def resolve_bound_interface(self, declared: list[str] | None = None) -> str | None:
+        """Resolve bound serial interface.
+
+        Args:
+            declared: List of declared interfaces, optional.
+
+        Returns:
+            Bound interface path, or None if not found.
+        """
         preferred = declared or self._declared_interfaces("uart")
         available = set(self.list_ports())
         for candidate in preferred:
@@ -24,6 +42,14 @@ class LinuxSerialCapability(SerialCapabilityContract):
         return None
 
     def port_exists(self, port: str) -> bool:
+        """Check if serial device exists.
+
+        Args:
+            port: Serial device path.
+
+        Returns:
+            True if device exists, False otherwise.
+        """
         return self.adapter._path_exists(port)
 
     def loopback_test(
@@ -34,6 +60,18 @@ class LinuxSerialCapability(SerialCapabilityContract):
         baudrate: int = 115200,
         timeout: int = 5,
     ) -> dict[str, Any]:
+        """Execute serial loopback test.
+
+        Args:
+            port: Serial device path.
+            payload: Test payload data.
+            baudrate: Baud rate, defaults to 115200.
+            timeout: Timeout in seconds, defaults to 5.
+
+        Returns:
+            Dictionary containing loopback test results including sent
+            and received data.
+        """
         if not self.port_exists(port):
             return {
                 "success": False,
@@ -94,6 +132,14 @@ class LinuxSerialCapability(SerialCapabilityContract):
         }
 
     def _declared_interfaces(self, name: str) -> list[str]:
+        """Get declared interfaces from board profile.
+
+        Args:
+            name: Interface name.
+
+        Returns:
+            List of declared interface paths.
+        """
         value = self.board_profile.get("interfaces", {}).get(name, [])
         if isinstance(value, list):
             return [item for item in value if isinstance(item, str)]

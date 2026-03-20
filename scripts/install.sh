@@ -3,9 +3,9 @@
 # hardware-test-platform installer - Bootstrap script
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash
-#   curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash -s -- --install-dir /opt/htp
-#   curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash -s -- --update-only
+#   curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash
+#   curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash -s -- --install-dir /opt/htp
+#   curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash -s -- --update-only
 #
 
 set -euo pipefail

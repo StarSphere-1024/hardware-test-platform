@@ -19,12 +19,11 @@ readonly COLOR_RESET='\033[0m'
 readonly COLOR_BOLD='\033[1m'
 
 # Configuration
-readonly REPO_OWNER="${REPO_OWNER:-stellar}"
-readonly REPO_NAME="${REPO_NAME:-hardware-test-platform}"
-readonly BRANCH="${BRANCH:-master}"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly INSTALLER_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/scripts/_install_installer.py"
-readonly COMMON_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/scripts/_install_common.py"
+REPO_OWNER="${REPO_OWNER:-StarSphere-1024}"
+REPO_NAME="${REPO_NAME:-hardware-test-platform}"
+BRANCH="${BRANCH:-master}"
+INSTALLER_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/scripts/_install_installer.py"
+COMMON_URL="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/${BRANCH}/scripts/_install_common.py"
 
 # Temporary directory for installer files
 TEMP_DIR=""
@@ -133,6 +132,21 @@ main() {
                 ;;
         esac
     done
+
+    # Add default repo-owner and repo-name if not provided
+    local has_owner=false
+    local has_name=false
+    for arg in "${args[@]}"; do
+        [[ "$arg" == "--repo-owner" ]] && has_owner=true
+        [[ "$arg" == "--repo-name" ]] && has_name=true
+    done
+
+    if [[ "$has_owner" == false ]]; then
+        args+=("--repo-owner" "$REPO_OWNER")
+    fi
+    if [[ "$has_name" == false ]]; then
+        args+=("--repo-name" "$REPO_NAME")
+    fi
 
     # Check prerequisites
     check_prerequisites || exit 1

@@ -53,8 +53,8 @@ Examples:
     parser.add_argument(
         "--repo-owner",
         type=str,
-        default="stellar",
-        help="GitHub organization/owner (default: stellar)",
+        default="StarSphere-1024",
+        help="GitHub organization/owner (default: StarSphere-1024)",
     )
     parser.add_argument(
         "--repo-name",

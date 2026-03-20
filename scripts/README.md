@@ -5,31 +5,31 @@
 ### 首次安装
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash
 ```
 
 ### 自定义安装目录
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash -s -- --install-dir /opt/htp
+curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash -s -- --install-dir /opt/htp
 ```
 
 ### 更新现有安装
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash -s -- --update-only
+curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash -s -- --update-only
 ```
 
 ### 强制重新安装
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash -s -- --force
+curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash -s -- --force
 ```
 
 ### 预演模式（不实际执行）
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | bash -s -- --dry-run
+curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash -s -- --dry-run
 ```
 
 ## 命令行选项
@@ -38,7 +38,7 @@ curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/maste
 |------|------|--------|
 | `--install-dir <path>` | 安装目录 | `~/hardware-test-platform` |
 | `--branch <name>` | Git 分支 | `master` |
-| `--repo-owner <owner>` | GitHub 组织名 | `stellar` |
+| `--repo-owner <owner>` | GitHub 组织名 | `StarSphere-1024` |
 | `--repo-name <name>` | 仓库名 | `hardware-test-platform` |
 | `--update-only` | 仅更新，不克隆 | - |
 | `--force` | 强制覆盖现有安装 | - |
@@ -112,7 +112,7 @@ curl -I https://raw.githubusercontent.com/
 如果安装到系统目录需要 root 权限：
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/stellar/hardware-test-platform/master/scripts/install.sh | sudo bash -s -- --install-dir /opt/htp
+curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | sudo bash -s -- --install-dir /opt/htp
 ```
 
 ## 本地开发
@@ -141,7 +141,7 @@ scripts/
 
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
-| `REPO_OWNER` | GitHub 组织名 | `stellar` |
+| `REPO_OWNER` | GitHub 组织名 | `StarSphere-1024` |
 | `REPO_NAME` | 仓库名 | `hardware-test-platform` |
 | `BRANCH` | Git 分支 | `master` |
 

@@ -18,19 +18,11 @@
 **环境要求**
 - Python 3.8+
 - pip
-- 基础 Linux 系统工具 (`ip`, `ping`, `ethtool` 等)
+- 基础 Linux 系统工具 (`curl`, `ip`, `ping`, `ethtool` 等)
 
-**克隆与安装**
+**一键安装**
 ```bash
-git clone <repository_url>
-cd hardware-test-platform
-
-# 创建并激活虚拟环境
-python -m venv .venv
-source .venv/bin/activate
-
-# 安装运行依赖包
-pip install -r requirements.txt
+curl -sSL https://raw.githubusercontent.com/StarSphere-1024/hardware-test-platform/master/scripts/install.sh | bash
 ```
 *(注：如果需要运行 `tests/` 目录下的自动化测试，请额外安装 `pytest`)*
 

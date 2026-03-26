@@ -484,46 +484,56 @@ class FunctionExecutor:
             TaskExecutionError: When operator is unsupported.
         """
         match operator:
+            # Equality check: actual == expected
             case "eq":
                 return actual == expected
+            # Inequality check: actual != expected
             case "ne":
                 return actual != expected
+            # Greater than: actual > expected (requires both values non-None)
             case "gt":
                 return (
                     actual is not None
                     and expected is not None
                     and actual > expected
                 )
+            # Greater than or equal: actual >= expected (requires both values non-None)
             case "gte":
                 return (
                     actual is not None
                     and expected is not None
                     and actual >= expected
                 )
+            # Less than: actual < expected (requires both values non-None)
             case "lt":
                 return (
                     actual is not None
                     and expected is not None
                     and actual < expected
                 )
+            # Less than or equal: actual <= expected (requires both values non-None)
             case "lte":
                 return (
                     actual is not None
                     and expected is not None
                     and actual <= expected
                 )
+            # Containment check: expected in actual (e.g., substring, list membership)
             case "contains":
                 try:
                     return expected in actual
                 except TypeError:
                     return False
+            # Membership check: actual in expected (e.g., value in list/range)
             case "in":
                 try:
                     return actual in expected
                 except TypeError:
                     return False
+            # Existence check: actual is not None
             case "exists":
                 return actual is not None
+            # Non-empty check: actual is not None, "", [], {}, or ()
             case "non_empty":
                 return actual not in (None, "", [], {}, ())
             case _:
